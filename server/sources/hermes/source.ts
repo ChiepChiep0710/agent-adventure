@@ -267,8 +267,8 @@ export class HermesSource implements AgentSource {
    * - `{ "pool": ["Ana", "Bruno"], "names": { "<session-id>": "Nome" } }` — o formato completo;
    * - `["Ana", "Bruno"]` — só a lista de nomes;
    * - `{ "<session-id>": "Nome" }` — só os nomes fixos (formato antigo).
-   * A lista (`pool`) é o "estoque": cada agente novo pega o primeiro nome livre dela, na ordem. Arquivo ausente ou
-   * inválido só deixa a lista vazia (o escritório sorteia os nomes) — nunca derruba a fonte.
+   * A lista (`pool`) é o "estoque": cada agente novo recebe um nome sorteado entre os que ainda estão livres. Arquivo
+   * ausente ou inválido só deixa a lista vazia (o escritório sorteia os nomes) — nunca derruba a fonte.
    */
   private loadNames(): void {
     const file = this.opts.namesFile;

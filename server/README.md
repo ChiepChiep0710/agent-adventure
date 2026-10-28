@@ -390,6 +390,16 @@ do [Hermes Agent](https://hermes-agent.nousresearch.com)) **só para leitura**, 
   O arquivo é relido a cada ciclo quando muda (sem reiniciar), o nome vale quando o agente entra no escritório, e nome
   repetido ou acima de 24 caracteres é ignorado. Aceita também só a lista (`["Ana", "Bruno"]`) ou só os nomes fixos
   (formato antigo). Os nomes escolhidos ficam também no `names.json`, então sobrevivem se o arquivo for apagado.
+
+  **Nome antigo não muda sozinho**: quem já tinha nome salvo (de antes do estoque existir, ou de um `pool` anterior)
+  continua com ele — o estoque só vale para quem entra sem nome. Para todos passarem a usar o estoque novo, pare o
+  servidor, esvazie `names` no `names.json` e suba de novo (com o servidor parado, senão ele regrava o arquivo):
+
+  ```sh
+  pkill -f "dist/server/index.js"
+  python3 -c "import json,os;p=os.path.expanduser('~/.habblaud/names.json');d=json.load(open(p));d['names']={};json.dump(d,open(p,'w'),indent=2)"
+  ```
+
 - **O que não existe**: terminal (o Hermes não grava transcript em arquivo), aprovar pelo escritório, mensagens pelo
   escritório e histórico de sessões. O agente do Hermes aparece com `provider: 'hermes'` e é excluído da projeção do
   Habblaud World (lá só existem `claude` e `codex`).
