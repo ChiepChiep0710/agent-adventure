@@ -3314,4 +3314,5 @@ export const FR: Readonly<Record<string, string>> = {
   "Hermes: falha ao ler o banco: {0}": "Hermes : échec de lecture de la base : {0}",
   "Hermes: sessão {0}: {1}": "Hermes : session {0} : {1}",
   "Hermes: subagente {0}: {1}": "Hermes : sous-agent {0} : {1}",
+  "Hermes: nomes.json ilegível ({0}); nomes sorteados.": "Hermes : fichier de noms illisible ({0}) ; les noms sont tirés au sort.",
 };

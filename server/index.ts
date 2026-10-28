@@ -142,7 +142,7 @@ if (codex) agents.add(codex);
 // Sessões do Hermes Agent (sources/hermes/): lê ~/.hermes/state.db só para leitura; HABBLAUD_HERMES=0 desliga e
 // sem state.db a fonte fica de fora.
 const hermes = config.hermes && HermesSource.available(config.hermesHome)
-  ? new HermesSource({ accounts, office, home: config.hermesHome })
+  ? new HermesSource({ accounts, office, home: config.hermesHome, namesFile: join(config.dataDir, 'hermes-names.json') })
   : undefined;
 if (hermes) agents.add(hermes);
 // Eventos dos hooks do Codex (POST /api/codex/events, mod/habblaud-codex/hook.mjs): vão para a fonte do Codex ao vivo

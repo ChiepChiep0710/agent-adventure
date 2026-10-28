@@ -24,12 +24,13 @@ import type {
   UpdateStatus,
 } from '../../shared/types';
 import { SHELL_WAIT_TOOL, SPECIAL, type ShellOutcome } from '../../shared/activity';
-import { nameKey, type AppearanceParts } from '../../shared/appearance';
+import { nameKey, parseCharacterName, type AppearanceParts } from '../../shared/appearance';
 import { DemoSimulator } from '../../shared/demo/simulator';
 import { describeGitHubEvent, githubEventKey, RoomEffects, type GitHubEvent } from '../../shared/github';
 import { hash32 } from '../../shared/hash';
 import { applyPermission } from '../permissions/registry';
 import type { NameStore, StoredCharacter } from './names';
+import type { PersonName } from '../../shared/names';
 import { normalizeCwd, roomDisplayNames, SlotAllocator } from './rooms';
 import { tr } from '../../shared/i18n';
 import type { WorldMeta } from '../../shared/world/api';
@@ -107,6 +108,11 @@ export interface MainInput {
   startedAt: number;
   status: AgentStatus;
   waitingFor?: string;
+  /**
+   * Nome pedido pela fonte (ex.: o `hermes-names.json` de quem usa o Hermes Agent). Vale quando é um nome válido e
+   * ainda não está em uso; senão o escritório sorteia do pool como sempre.
+   */
+  name?: string;
 }
 
 export interface SubInput {
@@ -117,6 +123,8 @@ export interface SubInput {
   title?: string;
   background: boolean;
   startedAt: number;
+  /** Nome pedido pela fonte, com as mesmas regras do agente principal (ver MainInput.name). */
+  name?: string;
 }
 
 interface AgentRecord {
@@ -327,7 +335,10 @@ export class Office {
     const chosen = this.roomCharacter(roomId, p.id, p.sessionId);
     // A mesma sessão retomada noutro processo (ex.: "Assumir aqui") mantém o nome, mesmo com o processo antigo
     // ainda saindo do escritório.
-    const person = chosen ?? this.deps.names.assign(p.sessionId, this.takenNames(undefined, p.sessionId));
+    const person =
+      chosen ??
+      this.preferredName(p.sessionId, p.name, this.takenNames(undefined, p.sessionId)) ??
+      this.deps.names.assign(p.sessionId, this.takenNames(undefined, p.sessionId));
     const info: AgentInfo = {
       id: p.id,
       kind: 'main',
@@ -589,7 +600,7 @@ export class Office {
       this.reactivateSub(p.id);
       return true;
     }
-    const person = this.deps.names.assign(p.id, this.takenNames());
+    const person = this.preferredName(p.id, p.name, this.takenNames()) ?? this.deps.names.assign(p.id, this.takenNames());
     const info: AgentInfo = {
       id: p.id,
       kind: 'sub',
@@ -1006,6 +1017,19 @@ export class Office {
         ...(this.deps.world ? { world: this.deps.world() } : {}),
       },
     };
+  }
+
+  /**
+   * Nome pedido pela fonte (MainInput.name / SubInput.name): vale só quando é um nome válido (1..NAME_MAX, sem
+   * controle) e ainda não está em uso — nomes repetidos deixariam duas pessoas iguais na mesma sala. Quando vale,
+   * fica guardado como o nome daquela sessão/agente, então sobrevive a reinícios sem depender do arquivo da fonte.
+   */
+  private preferredName(key: string, wanted: string | undefined, taken: Set<string>): PersonName | undefined {
+    const name = parseCharacterName(wanted);
+    if (!name || taken.has(name)) return undefined;
+    const person: PersonName = { name, look: this.deps.names.get(key)?.look ?? 'f' };
+    this.deps.names.remember(key, person);
+    return person;
   }
 
   /**

@@ -1,6 +1,6 @@
 // Integração da fonte do Hermes: um ~/.hermes de mentira (state.db sintético com o schema do Hermes 0.21), o
 // AccountsService e o Office de verdade. Nada aqui lê o banco do usuário.
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -87,7 +87,7 @@ interface SessionSeed {
   cost?: number;
 }
 
-async function setup(seed: (db: DbHandle, now: number) => void, opts: { now?: number } = {}) {
+async function setup(seed: (db: DbHandle, now: number) => void, opts: { now?: number; namesFile?: string } = {}) {
   const home = hermesHome();
   cleanups.push(home.cleanup);
   const db = await home.connect();
@@ -111,6 +111,7 @@ async function setup(seed: (db: DbHandle, now: number) => void, opts: { now?: nu
     accounts,
     office,
     home: home.dir,
+    ...(opts.namesFile ? { namesFile: opts.namesFile } : {}),
     now,
     pollMs: 3600_000,
     hasGitFile: (dir) => dir === REPO,
@@ -282,6 +283,42 @@ describe('HermesSource: espera por você', () => {
     addToolResult(t.db, t.source.lastPoll, 'q2');
     t.refresh();
     expect(agentOf(t.office).status).toBe('working');
+  });
+});
+
+describe('HermesSource: nomes', () => {
+  it('nomes do hermes-names.json valem para o principal e para o subagente', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'habblaud-hermes-names-'));
+    cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
+    const file = join(dir, 'hermes-names.json');
+    writeFileSync(file, JSON.stringify({ [SESSION]: 'Hermes Main', 'sub-1': 'Scout' }));
+    const t = await setup(
+      (db, now) => {
+        addSession(db, { startedAt: now - 120_000, lastActivityAt: now - 1_000 });
+        addSession(db, { id: 'sub-1', source: 'subagent', parent: SESSION, startedAt: now - 60_000, lastActivityAt: now - 1_000 });
+        lease(db, SESSION, now + 60_000);
+      },
+      { namesFile: file },
+    );
+    expect(agentOf(t.office).name).toBe('Hermes Main');
+    expect(t.office.get('hermes:sub-1')?.name).toBe('Scout');
+  });
+
+  it('sem hermes-names.json (ou arquivo inválido), os nomes continuam sorteados', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'habblaud-hermes-names-'));
+    cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
+    const file = join(dir, 'hermes-names.json');
+    writeFileSync(file, '{ isso não é json');
+    const t = await setup(
+      (db, now) => {
+        addSession(db, { startedAt: now - 120_000, lastActivityAt: now - 1_000 });
+        addToolCall(db, now - 100_000, 'read_file', { path: `${REPO}/a.ts` });
+      },
+      { namesFile: file },
+    );
+    const name = agentOf(t.office).name;
+    expect(name).toBeTruthy();
+    expect(name).not.toBe('Hermes Main');
   });
 });
 

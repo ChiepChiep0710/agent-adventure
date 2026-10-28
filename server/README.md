@@ -379,6 +379,11 @@ do [Hermes Agent](https://hermes-agent.nousresearch.com)) **só para leitura**, 
   vira `waiting`.
 - **Números**: `tool_call_count`, `input_tokens`, `output_tokens` e `estimated_cost_usd` da sessão viram as stats do
   agente. Sem uso por janela de 5 h/semana: o Hermes não tem esse dado e nada é inventado para ele.
+- **Nomes**: sorteados pelo escritório (`shared/names.ts`) e guardados em `<dataDir>/names.json`, como os outros
+  provedores. Para escolher os nomes, crie `<dataDir>/hermes-names.json`
+  (`{"<session-id>": "Nome"}`; vale também para subagente, pelo id da sessão dele). O arquivo é relido quando muda e
+  o nome vale quando entra no escritório — nome repetido ou acima de 24 caracteres é ignorado e o escritório sorteia.
+  Nomes definidos por lá ficam também no `names.json`, então sobrevivem se o arquivo for apagado.
 - **O que não existe**: terminal (o Hermes não grava transcript em arquivo), aprovar pelo escritório, mensagens pelo
   escritório e histórico de sessões. O agente do Hermes aparece com `provider: 'hermes'` e é excluído da projeção do
   Habblaud World (lá só existem `claude` e `codex`).

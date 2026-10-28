@@ -470,6 +470,34 @@ describe('Office', () => {
     expect(new Office({ ...deps, terminal: false }).commit().snapshot.meta.terminal).toBe(false);
   });
 
+  it('nome pedido pela fonte vale para principais e subagentes, e nomes repetidos são sorteados', () => {
+    const { office, names } = makeOffice();
+    office.addMain({
+      id: 'acc:1',
+      account: 'acc',
+      sessionId: 's1',
+      cwd: '/p/a',
+      role: 'Agente principal',
+      startedAt: 0,
+      status: 'idle',
+      name: '  Hermes Main  ',
+    });
+    // Nome do arquivo fica guardado: sobrevive ao próximo boot sem o arquivo.
+    office.addSub({ id: 's1:sub', parentId: 'acc:1', sessionId: 's1', role: 'Explore', background: false, startedAt: 0, name: 'Scout' });
+    const snap = office.commit().snapshot;
+    expect(snap.agents.find((a) => a.id === 'acc:1')?.name).toBe('Hermes Main');
+    expect(snap.agents.find((a) => a.id === 's1:sub')?.name).toBe('Scout');
+    expect(names.get('s1')?.name).toBe('Hermes Main');
+    expect(names.get('s1:sub')?.name).toBe('Scout');
+
+    // O mesmo nome já em uso: o escritório sorteia em vez de repetir.
+    office.addMain({ id: 'acc:2', account: 'acc', sessionId: 's2', cwd: '/p/b', role: 'Agente principal', startedAt: 0, status: 'idle', name: 'Hermes Main' });
+    expect(office.commit().snapshot.agents.find((a) => a.id === 'acc:2')?.name).not.toBe('Hermes Main');
+    // Nome inválido (vazio ou acima de 24 caracteres) também cai no sorteio.
+    office.addMain({ id: 'acc:3', account: 'acc', sessionId: 's3', cwd: '/p/c', role: 'Agente principal', startedAt: 0, status: 'idle', name: 'x'.repeat(25) });
+    expect(office.commit().snapshot.agents.find((a) => a.id === 'acc:3')?.name).not.toBe('x'.repeat(25));
+  });
+
   it('canMessage: só principais presentes que o registro de mensagens vê conectados; meta.messages com o recurso ligado', () => {
     const reach = new Set<string>();
     const deps = { names: new NameStore(null), version: 't', startedAt: 0, accounts: () => [], sources: () => [], accountName: () => undefined };
