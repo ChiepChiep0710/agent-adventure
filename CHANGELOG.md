@@ -12,11 +12,12 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
-- **Nomes escolhidos para os agentes do Hermes** (`hermes-names.json`). `{"<session-id>": "Nome"}` na pasta de dados
-  do Habblaud dá nome ao agente principal e ao subagente (pelo id da sessão dele), sem terminal e sem reiniciar: o
-  arquivo é relido a cada ciclo quando muda. Vale quando o agente entra no escritório; nome repetido ou maior que 24
-  caracteres é ignorado (o escritório sorteia). O escritório agora aceita um nome vindo da fonte (`MainInput.name` /
-  `SubInput.name`), que fica salvo no `names.json` como qualquer outro nome.
+- **Nomes escolhidos para os agentes do Hermes** (`hermes-names.json`). Dois campos opcionais na pasta de dados do
+  Habblaud: **`pool`** (estoque de nomes: cada agente novo, principal ou subagente, pega o primeiro nome livre na
+  ordem; esgotado, volta ao sorteio) e **`names`** (nome fixo por session id, que ganha do estoque). O arquivo é relido
+  a cada ciclo quando muda, sem terminal e sem reiniciar; nome repetido ou acima de 24 caracteres é ignorado. O
+  escritório agora aceita nome e estoque vindos da fonte (`MainInput.name` / `MainInput.pool`, idem em `SubInput`), e o
+  nome escolhido fica salvo no `names.json` como qualquer outro.
 - **`?lang=en` na URL fixa o idioma da interface.** O parâmetro vale mais que a preferência salva e que o idioma do
   navegador, e a escolha fica guardada para as próximas visitas (`pt`, `es` e `fr` também valem). Sem ele, tudo
   continua como era: preferência salva em Configurações › Idioma, senão os idiomas do navegador.

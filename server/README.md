@@ -379,11 +379,17 @@ do [Hermes Agent](https://hermes-agent.nousresearch.com)) **só para leitura**, 
   vira `waiting`.
 - **Números**: `tool_call_count`, `input_tokens`, `output_tokens` e `estimated_cost_usd` da sessão viram as stats do
   agente. Sem uso por janela de 5 h/semana: o Hermes não tem esse dado e nada é inventado para ele.
-- **Nomes**: sorteados pelo escritório (`shared/names.ts`) e guardados em `<dataDir>/names.json`, como os outros
-  provedores. Para escolher os nomes, crie `<dataDir>/hermes-names.json`
-  (`{"<session-id>": "Nome"}`; vale também para subagente, pelo id da sessão dele). O arquivo é relido quando muda e
-  o nome vale quando entra no escritório — nome repetido ou acima de 24 caracteres é ignorado e o escritório sorteia.
-  Nomes definidos por lá ficam também no `names.json`, então sobrevivem se o arquivo for apagado.
+- **Nomes**: por padrão sorteados pelo escritório (`shared/names.ts`) e guardados em `<dataDir>/names.json`. Para
+  escolher, crie `<dataDir>/hermes-names.json`, com dois campos opcionais:
+  - **`pool`**: o estoque (`["Ana", "Bruno", …]`, até 200 nomes). Cada agente novo — principal ou subagente — pega o
+    **primeiro nome livre, na ordem**; esgotado o estoque, o escritório volta a sortear. Quem já tem nome salvo não troca
+    quando a lista muda.
+  - **`names`**: nomes fixos por id (`{"<session-id>": "Nome"}`, também pelo id do agente). Ganha do estoque e do nome
+    salvo — é o jeito de fixar o nome de uma sessão específica.
+
+  O arquivo é relido a cada ciclo quando muda (sem reiniciar), o nome vale quando o agente entra no escritório, e nome
+  repetido ou acima de 24 caracteres é ignorado. Aceita também só a lista (`["Ana", "Bruno"]`) ou só os nomes fixos
+  (formato antigo). Os nomes escolhidos ficam também no `names.json`, então sobrevivem se o arquivo for apagado.
 - **O que não existe**: terminal (o Hermes não grava transcript em arquivo), aprovar pelo escritório, mensagens pelo
   escritório e histórico de sessões. O agente do Hermes aparece com `provider: 'hermes'` e é excluído da projeção do
   Habblaud World (lá só existem `claude` e `codex`).

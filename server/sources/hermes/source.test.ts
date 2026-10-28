@@ -304,6 +304,38 @@ describe('HermesSource: nomes', () => {
     expect(t.office.get('hermes:sub-1')?.name).toBe('Scout');
   });
 
+  it('estoque de nomes (lista no hermes-names.json): principal e subagente pegam em ordem', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'habblaud-hermes-names-'));
+    cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
+    const file = join(dir, 'hermes-names.json');
+    writeFileSync(file, JSON.stringify({ pool: ['Ana', 'Bruno', 'Carla'] }));
+    const t = await setup(
+      (db, now) => {
+        addSession(db, { startedAt: now - 120_000, lastActivityAt: now - 1_000 });
+        addSession(db, { id: 'sub-1', source: 'subagent', parent: SESSION, startedAt: now - 60_000, lastActivityAt: now - 1_000 });
+        lease(db, SESSION, now + 60_000);
+      },
+      { namesFile: file },
+    );
+    expect(agentOf(t.office).name).toBe('Ana');
+    expect(t.office.get('hermes:sub-1')?.name).toBe('Bruno');
+  });
+
+  it('o arquivo também aceita só a lista (`["Ana", "Bruno"]`)', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'habblaud-hermes-names-'));
+    cleanups.push(() => rmSync(dir, { recursive: true, force: true }));
+    const file = join(dir, 'hermes-names.json');
+    writeFileSync(file, JSON.stringify(['Ana', 'Bruno']));
+    const t = await setup(
+      (db, now) => {
+        addSession(db, { startedAt: now - 120_000, lastActivityAt: now - 1_000 });
+        addToolCall(db, now - 100_000, 'read_file', { path: `${REPO}/a.ts` });
+      },
+      { namesFile: file },
+    );
+    expect(agentOf(t.office).name).toBe('Ana');
+  });
+
   it('sem hermes-names.json (ou arquivo inválido), os nomes continuam sorteados', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'habblaud-hermes-names-'));
     cleanups.push(() => rmSync(dir, { recursive: true, force: true }));

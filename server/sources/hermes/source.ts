@@ -19,6 +19,7 @@
 // incremental: nunca varre a tabela `messages` inteira (o banco do usuário passa fácil de 1 GB).
 import { readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { parseCharacterName } from '../../../shared/appearance';
 import type { Activity, AgentStats, AgentStatus, SourceInfo } from '../../../shared/types';
 import type { AccountEntry, AccountsService } from '../../accounts/service';
 import { errMsg, log } from '../../log';
@@ -52,6 +53,21 @@ const ACCOUNT_ID = 'hermes';
 const MAIN_ROLE = tr('Agente principal (Hermes)');
 const SUB_ROLE = tr('Subagente (Hermes)');
 const WAITING_ANSWER = tr('responder a uma pergunta');
+/** Teto da lista de nomes (hermes-names.json): o excesso é ignorado. */
+const MAX_POOL = 200;
+
+/** Lista de nomes do arquivo: só texto válido como nome (1..24, sem controle), sem repetição. */
+function nameList(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const out: string[] = [];
+  for (const v of raw) {
+    const name = parseCharacterName(v);
+    if (!name || out.includes(name)) continue;
+    out.push(name);
+    if (out.length >= MAX_POOL) break;
+  }
+  return out;
+}
 
 export interface HermesSourceOptions {
   accounts: AccountsService;
@@ -158,8 +174,8 @@ export class HermesSource implements AgentSource {
   private timer: ReturnType<typeof setInterval> | null = null;
   private lastPollAt = 0;
   private stopped = false;
-  /** Nomes do arquivo (opcional), recarregados quando o mtime muda. */
-  private names: { mtimeMs: number; map: Map<string, string> } = { mtimeMs: -1, map: new Map() };
+  /** Nomes do arquivo (opcional): nomes fixos por id e a lista de onde os novos agentes pegam o nome. */
+  private names: { mtimeMs: number; map: Map<string, string>; pool: string[] } = { mtimeMs: -1, map: new Map(), pool: [] };
   private readonly now: () => number;
   private readonly presenceMs: number;
   private readonly windowMs: number;
@@ -247,9 +263,12 @@ export class HermesSource implements AgentSource {
   }
 
   /**
-   * Lê `namesFile` (opcional) quando ele muda no disco: `{ "<session-id ou id do agente>": "Nome" }`. Aceita também
-   * `{ "…id…": { "name": "Nome" } }`, no mesmo formato do names.json do escritório. Arquivo ausente ou inválido só
-   * deixa a lista vazia (o escritório sorteia os nomes) — nunca derruba a fonte.
+   * Lê `namesFile` (opcional) quando ele muda no disco. Formatos aceitos:
+   * - `{ "pool": ["Ana", "Bruno"], "names": { "<session-id>": "Nome" } }` — o formato completo;
+   * - `["Ana", "Bruno"]` — só a lista de nomes;
+   * - `{ "<session-id>": "Nome" }` — só os nomes fixos (formato antigo).
+   * A lista (`pool`) é o "estoque": cada agente novo pega o primeiro nome livre dela, na ordem. Arquivo ausente ou
+   * inválido só deixa a lista vazia (o escritório sorteia os nomes) — nunca derruba a fonte.
    */
   private loadNames(): void {
     const file = this.opts.namesFile;
@@ -258,23 +277,34 @@ export class HermesSource implements AgentSource {
     try {
       mtimeMs = statSync(file).mtimeMs;
     } catch {
-      if (this.names.map.size) this.names = { mtimeMs: -1, map: new Map() };
+      if (this.names.map.size || this.names.pool.length) this.names = { mtimeMs: -1, map: new Map(), pool: [] };
       return;
     }
     if (mtimeMs === this.names.mtimeMs) return;
-    const map = new Map<string, string>();
+    let map = new Map<string, string>();
+    let pool: string[] = [];
     try {
       const j = JSON.parse(readFileSync(file, 'utf8')) as unknown;
-      if (j && typeof j === 'object' && !Array.isArray(j)) {
-        for (const [key, v] of Object.entries(j as Record<string, unknown>)) {
-          const name = typeof v === 'string' ? v : (v as { name?: unknown } | null)?.name;
-          if (typeof name === 'string' && name.trim()) map.set(key, name.trim());
+      if (Array.isArray(j)) {
+        pool = nameList(j);
+      } else if (j && typeof j === 'object') {
+        const o = j as Record<string, unknown>;
+        const sections = 'names' in o || 'pool' in o;
+        if ('pool' in o) pool = nameList(o.pool);
+        const src = sections ? o.names : o;
+        if (src && typeof src === 'object' && !Array.isArray(src)) {
+          for (const [key, v] of Object.entries(src as Record<string, unknown>)) {
+            const name = typeof v === 'string' ? v : (v as { name?: unknown } | null)?.name;
+            if (typeof name === 'string' && name.trim()) map.set(key, name.trim());
+          }
         }
       }
     } catch (err) {
       log.warnOnce(`hermes-names:${errMsg(err)}`, tr('Hermes: nomes.json ilegível ({0}); nomes sorteados.', [errMsg(err)]));
+      map = new Map();
+      pool = [];
     }
-    this.names = { mtimeMs, map };
+    this.names = { mtimeMs, map, pool };
   }
 
   /** Nome pedido para o agente: tenta as chaves na ordem (id do agente, id da sessão). */
@@ -407,6 +437,7 @@ export class HermesSource implements AgentSource {
         status,
         waitingFor,
         name: this.nameOf(id, row.id),
+        pool: this.names.pool,
       });
       a.inOffice = this.opts.office.has(id);
       if (!a.inOffice) return true;
@@ -520,6 +551,7 @@ export class HermesSource implements AgentSource {
         background: false,
         startedAt: s.startedAt,
         name: this.nameOf(id, row.id),
+        pool: this.names.pool,
       });
       s.inOffice = added;
       if (!added) return;

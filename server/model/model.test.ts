@@ -498,6 +498,41 @@ describe('Office', () => {
     expect(office.commit().snapshot.agents.find((a) => a.id === 'acc:3')?.name).not.toBe('x'.repeat(25));
   });
 
+  it('estoque de nomes: cada agente novo pega o primeiro livre, na ordem, e quem já tem nome não troca', () => {
+    const { office } = makeOffice();
+    const pool = ['Ana', 'Bruno', 'Carla'];
+    const main = (n: number, extra: { name?: string; pool?: readonly string[] } = {}) =>
+      office.addMain({
+        id: `acc:${n}`,
+        account: 'acc',
+        sessionId: `s${n}`,
+        cwd: `/p/r${n}`,
+        role: 'Agente principal',
+        startedAt: 0,
+        status: 'idle',
+        ...extra,
+      });
+    main(1, { pool });
+    office.addSub({ id: 's1:sub', parentId: 'acc:1', sessionId: 's1', role: 'Explore', background: false, startedAt: 0, pool });
+    main(2, { pool });
+    let snap = office.commit().snapshot;
+    const nameOf = (id: string) => snap.agents.find((a) => a.id === id)?.name;
+    expect([nameOf('acc:1'), nameOf('s1:sub'), nameOf('acc:2')]).toEqual(['Ana', 'Bruno', 'Carla']);
+
+    // Estoque novo: quem já entrou mantém o nome; o próximo pega o primeiro livre do estoque novo.
+    main(3, { pool: ['Ana', 'Zoe'] });
+    // Nome fixo (`name`) ganha do estoque.
+    main(4, { pool, name: 'Fixo' });
+    snap = office.commit().snapshot;
+    expect(nameOf('acc:3')).toBe('Zoe');
+    expect(nameOf('acc:4')).toBe('Fixo');
+
+    // Estoque esgotado (todos os nomes em uso): cai no sorteio do escritório, sem repetir.
+    main(5, { pool: ['Ana', 'Bruno'] });
+    snap = office.commit().snapshot;
+    expect(['Ana', 'Bruno']).not.toContain(nameOf('acc:5'));
+  });
+
   it('canMessage: só principais presentes que o registro de mensagens vê conectados; meta.messages com o recurso ligado', () => {
     const reach = new Set<string>();
     const deps = { names: new NameStore(null), version: 't', startedAt: 0, accounts: () => [], sources: () => [], accountName: () => undefined };

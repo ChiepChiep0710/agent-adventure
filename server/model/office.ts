@@ -110,9 +110,14 @@ export interface MainInput {
   waitingFor?: string;
   /**
    * Nome pedido pela fonte (ex.: o `hermes-names.json` de quem usa o Hermes Agent). Vale quando é um nome válido e
-   * ainda não está em uso; senão o escritório sorteia do pool como sempre.
+   * ainda não está em uso; senão o escritório sorteia do pool como sempre. Ganha até do nome já salvo: é o "fixo".
    */
   name?: string;
+  /**
+   * Estoque de nomes da fonte (`["Ana", "Bruno", …]`): o agente novo pega o primeiro nome livre, na ordem. Só vale
+   * para quem ainda não tem nome salvo — quem já entrou no escritório mantém o seu.
+   */
+  pool?: readonly string[];
 }
 
 export interface SubInput {
@@ -125,6 +130,8 @@ export interface SubInput {
   startedAt: number;
   /** Nome pedido pela fonte, com as mesmas regras do agente principal (ver MainInput.name). */
   name?: string;
+  /** Estoque de nomes da fonte (ver MainInput.pool). */
+  pool?: readonly string[];
 }
 
 interface AgentRecord {
@@ -338,6 +345,7 @@ export class Office {
     const person =
       chosen ??
       this.preferredName(p.sessionId, p.name, this.takenNames(undefined, p.sessionId)) ??
+      this.pooledName(p.sessionId, p.pool, this.takenNames(undefined, p.sessionId)) ??
       this.deps.names.assign(p.sessionId, this.takenNames(undefined, p.sessionId));
     const info: AgentInfo = {
       id: p.id,
@@ -600,7 +608,10 @@ export class Office {
       this.reactivateSub(p.id);
       return true;
     }
-    const person = this.preferredName(p.id, p.name, this.takenNames()) ?? this.deps.names.assign(p.id, this.takenNames());
+    const person =
+      this.preferredName(p.id, p.name, this.takenNames()) ??
+      this.pooledName(p.id, p.pool, this.takenNames()) ??
+      this.deps.names.assign(p.id, this.takenNames());
     const info: AgentInfo = {
       id: p.id,
       kind: 'sub',
@@ -1030,6 +1041,23 @@ export class Office {
     const person: PersonName = { name, look: this.deps.names.get(key)?.look ?? 'f' };
     this.deps.names.remember(key, person);
     return person;
+  }
+
+  /**
+   * Nome tirado do estoque da fonte (`MainInput.pool`), na ordem: o primeiro que ainda não está em uso. Só vale para
+   * quem ainda não tem nome salvo — assim um agente que já entrou no escritório não troca de nome quando a lista muda.
+   * O visual alterna entre os dois corpos conforme a posição na lista, só para a sala não ficar toda igual.
+   */
+  private pooledName(key: string, pool: readonly string[] | undefined, taken: Set<string>): PersonName | undefined {
+    if (!pool?.length || this.deps.names.get(key)) return undefined;
+    for (const [i, raw] of pool.entries()) {
+      const name = parseCharacterName(raw);
+      if (!name || taken.has(name)) continue;
+      const person: PersonName = { name, look: i % 2 === 0 ? 'f' : 'm' };
+      this.deps.names.remember(key, person);
+      return person;
+    }
+    return undefined;
   }
 
   /**
