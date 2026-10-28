@@ -498,39 +498,57 @@ describe('Office', () => {
     expect(office.commit().snapshot.agents.find((a) => a.id === 'acc:3')?.name).not.toBe('x'.repeat(25));
   });
 
-  it('estoque de nomes: cada agente novo pega o primeiro livre, na ordem, e quem já tem nome não troca', () => {
-    const { office } = makeOffice();
-    const pool = ['Ana', 'Bruno', 'Carla'];
-    const main = (n: number, extra: { name?: string; pool?: readonly string[] } = {}) =>
-      office.addMain({
-        id: `acc:${n}`,
-        account: 'acc',
-        sessionId: `s${n}`,
-        cwd: `/p/r${n}`,
-        role: 'Agente principal',
+  it('estoque de nomes: sorteia entre os livres (sem repetir) e quem já tem nome não troca', () => {
+    const build = (random: () => number) => {
+      const names = new NameStore(null);
+      const office = new Office({
+        names,
+        version: 't',
         startedAt: 0,
-        status: 'idle',
-        ...extra,
+        accounts: () => [],
+        sources: () => [],
+        accountName: () => undefined,
+        random,
       });
-    main(1, { pool });
-    office.addSub({ id: 's1:sub', parentId: 'acc:1', sessionId: 's1', role: 'Explore', background: false, startedAt: 0, pool });
-    main(2, { pool });
-    let snap = office.commit().snapshot;
-    const nameOf = (id: string) => snap.agents.find((a) => a.id === id)?.name;
-    expect([nameOf('acc:1'), nameOf('s1:sub'), nameOf('acc:2')]).toEqual(['Ana', 'Bruno', 'Carla']);
+      let n = 0;
+      const main = (extra: { name?: string; pool?: readonly string[] } = {}) =>
+        office.addMain({
+          id: `acc:${++n}`,
+          account: 'acc',
+          sessionId: `s${n}`,
+          cwd: `/p/r${n}`,
+          role: 'Agente principal',
+          startedAt: 0,
+          status: 'idle',
+          ...extra,
+        });
+      return { office, names, main };
+    };
+    const pool = ['Ana', 'Bruno', 'Carla'];
+    const namesOf = (office: Office) => office.commit().snapshot.agents.map((a) => a.name);
 
-    // Estoque novo: quem já entrou mantém o nome; o próximo pega o primeiro livre do estoque novo.
-    main(3, { pool: ['Ana', 'Zoe'] });
-    // Nome fixo (`name`) ganha do estoque.
-    main(4, { pool, name: 'Fixo' });
-    snap = office.commit().snapshot;
-    expect(nameOf('acc:3')).toBe('Zoe');
-    expect(nameOf('acc:4')).toBe('Fixo');
+    // random() = 0: sempre o primeiro livre da lista.
+    const first = build(() => 0);
+    first.main({ pool });
+    first.office.addSub({ id: 's1:sub', parentId: 'acc:1', sessionId: 's1', role: 'Explore', background: false, startedAt: 0, pool });
+    first.main({ pool });
+    expect(namesOf(first.office)).toEqual(['Ana', 'Bruno', 'Carla']);
 
-    // Estoque esgotado (todos os nomes em uso): cai no sorteio do escritório, sem repetir.
-    main(5, { pool: ['Ana', 'Bruno'] });
-    snap = office.commit().snapshot;
-    expect(['Ana', 'Bruno']).not.toContain(nameOf('acc:5'));
+    // random() = 0.999: sempre o último livre — é sorteio, não a ordem da lista.
+    const last = build(() => 0.999);
+    last.main({ pool });
+    last.main({ pool });
+    expect(namesOf(last.office)).toEqual(['Carla', 'Bruno']);
+
+    // Estoque novo só vale para quem ainda não tem nome; nome fixo (`name`) ganha do estoque.
+    first.main({ pool: ['Ana', 'Zoe'] });
+    first.main({ pool, name: 'Fixo' });
+    expect(namesOf(first.office).slice(3)).toEqual(['Zoe', 'Fixo']);
+
+    // Estoque todo em uso: cai no sorteio do escritório, sem repetir.
+    first.main({ pool: ['Ana', 'Bruno'] });
+    const extra = namesOf(first.office)[5];
+    expect(['Ana', 'Bruno', 'Carla', 'Zoe', 'Fixo']).not.toContain(extra);
   });
 
   it('canMessage: só principais presentes que o registro de mensagens vê conectados; meta.messages com o recurso ligado', () => {

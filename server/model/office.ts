@@ -82,6 +82,8 @@ export interface OfficeDeps {
   /** Habblaud World (WorldService.meta; ver OfficeSnapshot.meta.world). */
   world?: () => WorldMeta;
   now?: () => number;
+  /** Sorteio dos nomes do estoque da fonte (0..1); ausente = Math.random. Só os testes passam um valor fixo. */
+  random?: () => number;
 }
 
 /** O que o transcript sabe sobre o agente (aplicado de uma vez). */
@@ -1044,20 +1046,21 @@ export class Office {
   }
 
   /**
-   * Nome tirado do estoque da fonte (`MainInput.pool`), na ordem: o primeiro que ainda não está em uso. Só vale para
-   * quem ainda não tem nome salvo — assim um agente que já entrou no escritório não troca de nome quando a lista muda.
-   * O visual alterna entre os dois corpos conforme a posição na lista, só para a sala não ficar toda igual.
+   * Nome tirado do estoque da fonte (`MainInput.pool`): **sorteado** entre os que ainda estão livres (nunca repete um
+   * nome em uso). Só vale para quem ainda não tem nome salvo — quem já entrou no escritório não troca de nome quando a
+   * lista muda. O visual segue a posição do nome na lista (f/m), só para a sala não ficar toda igual.
    */
   private pooledName(key: string, pool: readonly string[] | undefined, taken: Set<string>): PersonName | undefined {
     if (!pool?.length || this.deps.names.get(key)) return undefined;
+    const free: Array<{ name: string; look: 'f' | 'm' }> = [];
     for (const [i, raw] of pool.entries()) {
       const name = parseCharacterName(raw);
-      if (!name || taken.has(name)) continue;
-      const person: PersonName = { name, look: i % 2 === 0 ? 'f' : 'm' };
-      this.deps.names.remember(key, person);
-      return person;
+      if (name && !taken.has(name)) free.push({ name, look: i % 2 === 0 ? 'f' : 'm' });
     }
-    return undefined;
+    if (!free.length) return undefined;
+    const pick = free[Math.min(free.length - 1, Math.floor((this.deps.random?.() ?? Math.random()) * free.length))];
+    this.deps.names.remember(key, pick);
+    return pick;
   }
 
   /**

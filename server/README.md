@@ -381,9 +381,9 @@ do [Hermes Agent](https://hermes-agent.nousresearch.com)) **só para leitura**, 
   agente. Sem uso por janela de 5 h/semana: o Hermes não tem esse dado e nada é inventado para ele.
 - **Nomes**: por padrão sorteados pelo escritório (`shared/names.ts`) e guardados em `<dataDir>/names.json`. Para
   escolher, crie `<dataDir>/hermes-names.json`, com dois campos opcionais:
-  - **`pool`**: o estoque (`["Ana", "Bruno", …]`, até 200 nomes). Cada agente novo — principal ou subagente — pega o
-    **primeiro nome livre, na ordem**; esgotado o estoque, o escritório volta a sortear. Quem já tem nome salvo não troca
-    quando a lista muda.
+  - **`pool`**: o estoque (`["Ana", "Bruno", …]`, até 200 nomes). Cada agente novo — principal ou subagente — recebe um
+    nome **sorteado entre os que ainda estão livres** (nunca repete um nome em uso); esgotado o estoque, o escritório
+    volta a sortear do pool dele. Quem já tem nome salvo não troca quando a lista muda.
   - **`names`**: nomes fixos por id (`{"<session-id>": "Nome"}`, também pelo id do agente). Ganha do estoque e do nome
     salvo — é o jeito de fixar o nome de uma sessão específica.
 
