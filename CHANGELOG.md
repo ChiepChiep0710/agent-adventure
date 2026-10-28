@@ -10,6 +10,16 @@ do meio (0.**3**.0).
 
 ## [Não lançado]
 
+### Adicionado
+
+- **Sessões do Hermes Agent no escritório.** Uma terceira fonte de agentes (`server/sources/hermes/`) lê
+  `~/.hermes/state.db` **só para leitura** e mostra as sessões do Hermes como personagens: principais e subagentes,
+  com status (`working` pelo turno aberto em `session_turn_leases`, `idle`, `waiting` quando a ferramenta `clarify`
+  espera resposta, `done`/`offline`), atividade por chamada de ferramenta, título, modelo, tokens e custo. A sala é
+  o repositório tocado (o primeiro caminho com `.git` nos argumentos) ou, sem projeto, uma sala por canal
+  (`~/.hermes/hermes-rooms/<canal>`). `HABBLAUD_HERMES=0` desliga e `HABBLAUD_HERMES_HOME` aponta outra pasta de
+  dados. O Hermes não expõe uso por janela de 5 h/semana nem terminal em arquivo: nada disso é inventado para ele.
+
 ## [1.0.3] - 2026-10-16
 
 ### Corrigido

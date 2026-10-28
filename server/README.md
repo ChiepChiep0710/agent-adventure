@@ -355,6 +355,34 @@ do Codex levam `provider: 'codex'` (ausente = Claude Code). Ids: `<conta>:<threa
   `/ack` (mesma trava das mensagens). `canMessage` = há entregador (binário achado, ou auxiliar visto há até 10 s).
   Retorno 0 = entrou na fila da sessão (`delivered`); o Codex consome a fila a cada ~10 s, quando a sessão fica ociosa.
 
+## Hermes Agent
+
+Terceira fonte de agentes (`sources/hermes/`, `AgentSource` com `provider: 'hermes'`): lê `~/.hermes/state.db` (o banco
+do [Hermes Agent](https://hermes-agent.nousresearch.com)) **só para leitura**, via `node:sqlite` (`DatabaseSync` com
+`readOnly`), e alimenta o Office. Nada é escrito no Hermes e nada sai da máquina. Ids: `hermes:<sessionId>`;
+`account` = `hermes` (uma conta só, letra H, sem uso de plano).
+
+- **Presença** (`sources/hermes/source.ts`): o Hermes não grava um registro de sessões abertas. Turno rodando agora =
+  linha em `session_turn_leases` com `expires_at` no futuro → `working`. Sem turno, a sessão continua no escritório
+  enquanto `sessions.last_activity_at` for recente (15 min, `PRESENCE_MS`); passado isso, o personagem sai e volta na
+  próxima mensagem. `sessions.ended_at` preenchido = encerrada.
+- **Subagentes**: `sessions.source = 'subagent'` + `parent_session_id`; entram enquanto `ended_at` é nulo, entregam ao
+  pai quando termina. O título é a primeira mensagem do usuário (o pedido que o pai fez).
+- **Sala**: `sessions.cwd` só existe nas sessões de CLI (o gateway não grava), então o projeto sai dos caminhos
+  absolutos nos argumentos das ferramentas, subindo até a pasta com `.git` (`sources/hermes/project.ts`). Sem nenhum
+  caminho utilizável, a sala é fictícia por canal (`~/.hermes/hermes-rooms/<canal>`), e só depois de `ROOM_WAIT_MS`
+  (20 s) para dar tempo de o agente tocar um repositório.
+- **Atividade** (`sources/hermes/activity.ts`): cada mensagem nova (cursor por `messages.id`, leitura incremental) vira
+  atividade: `terminal`/`execute_code` reaproveitam a heurística de comando do `shared/activity.ts`; `read_file`,
+  `patch`, `write_file`, `search_files`, `web_search`, `web_extract`, `browser_exec`, `delegate_task`, `skill_*`,
+  `memory`, `clarify`, `todo_list`, `discord`... têm descrição própria. `clarify` sem resposta há `WAIT_MIN_MS` (8 s)
+  vira `waiting`.
+- **Números**: `tool_call_count`, `input_tokens`, `output_tokens` e `estimated_cost_usd` da sessão viram as stats do
+  agente. Sem uso por janela de 5 h/semana: o Hermes não tem esse dado e nada é inventado para ele.
+- **O que não existe**: terminal (o Hermes não grava transcript em arquivo), aprovar pelo escritório, mensagens pelo
+  escritório e histórico de sessões. O agente do Hermes aparece com `provider: 'hermes'` e é excluído da projeção do
+  Habblaud World (lá só existem `claude` e `codex`).
+
 ## Habblaud World
 
 Ligado por padrão, apontando para `server.habblaud.com` (`DEFAULT_WORLD_URL` em `config.ts`); nada sai do computador
@@ -482,6 +510,8 @@ em `shared/world/city.ts` (fonte da verdade; o servidor do mundo guarda a cópia
 | `HABBLAUD_BIND` | — (Compose: `127.0.0.1`) | só Docker: interface do host onde a porta é publicada, repassada ao container; só loopback liga o terminal |
 | `HABBLAUD_TERMINAL` | — | `0` desliga o terminal, as permissões e as mensagens pelo escritório (não liga com a porta exposta) |
 | `HABBLAUD_CODEX` | ligado | `0` desliga a fonte do Codex |
+| `HABBLAUD_HERMES` | ligado | `0` desliga a fonte do Hermes Agent (sem `state.db` na pasta ela já fica de fora) |
+| `HABBLAUD_HERMES_HOME` | `~/.hermes` | pasta de dados do Hermes Agent lida pela fonte (`state.db` + `runtime/`), só para leitura |
 | `HABBLAUD_CODEX_DIRS` | — | pastas do Codex separadas por vírgula; substitui a detecção (`CODEX_HOME` e `~/.codex*`) |
 | `HABBLAUD_CODEX_BIN` | `codex` do PATH | binário do Codex para o `codex queue` (modo Node e `npm run codex:bridge`) |
 | `HABBLAUD_MENSAGENS` | ligado (com o terminal) | `0`, `false`, `off` ou `no` desligam só as mensagens pelo escritório |

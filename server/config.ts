@@ -52,6 +52,13 @@ export interface ServerConfig {
   updateCheck: boolean;
   /** Observa as sessões do Codex (sources/codex/); HABBLAUD_CODEX=0 desliga. */
   codex: boolean;
+  /**
+   * Observa as sessões do Hermes Agent (sources/hermes/): lê ~/.hermes/state.db só para leitura.
+   * HABBLAUD_HERMES=0 desliga; HABBLAUD_HERMES_HOME troca a pasta (padrão ~/.hermes).
+   */
+  hermes: boolean;
+  /** Pasta de dados do Hermes Agent (a que tem state.db e runtime/active_sessions.json). */
+  hermesHome: string;
   /** Segunda porta, com login, para o celular na rede local (http/remote.ts); ausente = desligada. */
   remote?: RemoteConfig;
   /** Por que o acesso remoto ficou desligado quando as variáveis estão incompletas. */
@@ -249,6 +256,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: string[] 
     repo: pkg.repo,
     updateCheck: !env.HABBLAUD_UPDATE_CHECK?.trim() || isTruthy(env.HABBLAUD_UPDATE_CHECK),
     codex: !env.HABBLAUD_CODEX?.trim() || isTruthy(env.HABBLAUD_CODEX),
+    hermes: !env.HABBLAUD_HERMES?.trim() || isTruthy(env.HABBLAUD_HERMES),
+    hermesHome: resolve(env.HABBLAUD_HERMES_HOME?.trim() || join(inDocker ? '/hermes' : home, inDocker ? '' : '.hermes')),
     remote: remote.config,
     remoteWarning: remote.warning,
     world: parseWorldConfig(env, argv),
