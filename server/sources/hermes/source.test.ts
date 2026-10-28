@@ -233,6 +233,19 @@ describe('HermesSource: presença e status', () => {
     expect(t.office.roomPath(a.roomId)).toBe(join(t.home.dir, 'hermes-rooms', 'hieunm-xplat'));
   });
 
+  it('a sala vem do começo da conversa, não das últimas falas', async () => {
+    const t = await setup((db, now) => {
+      addSession(db, { startedAt: now - 600_000, lastActivityAt: now - 1_000 });
+      // Trabalho no repositório lá atrás...
+      addToolCall(db, now - 590_000, 'terminal', { command: `cd ${REPO} && npm test` }, 'old-1');
+      addToolResult(db, now - 589_000, 'old-1');
+      // ...e as últimas 8 mensagens são conversa sem caminho nenhum.
+      for (let i = 0; i < 9; i++) db.exec('INSERT INTO messages (session_id, role, content, timestamp) VALUES (?,?,?,?)', SESSION, 'assistant', `fala ${i}`, sec(now - 9_000 + i * 1_000));
+    });
+    const a = agentOf(t.office);
+    expect(t.office.roomPath(a.roomId)).toBe(REPO);
+  });
+
   it('números da sessão viram stats do agente', async () => {
     const t = await setup((db, now) => {
       addSession(db, { startedAt: now - 60_000, lastActivityAt: now - 1_000, toolCalls: 12, tokensIn: 3400, tokensOut: 900, cost: 0.42, title: 'Arrumar o build' });

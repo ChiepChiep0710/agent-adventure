@@ -57,14 +57,33 @@ export function serverLocale(env: Record<string, string | undefined>, intl?: str
   return 'pt-BR';
 }
 
+/**
+ * Idioma pedido na URL (`?lang=en`, `?lang=pt`...): undefined quando não há um idioma suportado. É o atalho para
+ * abrir o escritório no idioma que se quer sem passar por Configurações › Idioma (e vale para um link salvo).
+ */
+export function localeFromQuery(search: string): Locale | undefined {
+  return normalizeLocale(new URLSearchParams(search).get('lang'));
+}
+
 function detect(): Locale {
   const g = globalThis as {
     window?: unknown;
-    localStorage?: { getItem(k: string): string | null };
+    location?: { search?: string };
+    localStorage?: { getItem(k: string): string | null; setItem?(k: string, v: string): void };
     navigator?: { languages?: readonly string[]; language?: string };
     process?: { env?: Record<string, string | undefined> };
   };
   if (g.window !== undefined) {
+    // `?lang=en` na URL: vale mais que tudo e fica salvo (é o jeito de fixar o idioma num link/atalho).
+    const fromUrl = localeFromQuery(g.location?.search ?? '');
+    if (fromUrl) {
+      try {
+        g.localStorage?.setItem?.(LOCALE_STORAGE_KEY, fromUrl);
+      } catch {
+        // localStorage bloqueado: o parâmetro vale só nesta carga da página.
+      }
+      return fromUrl;
+    }
     try {
       const saved = normalizeLocale(g.localStorage?.getItem(LOCALE_STORAGE_KEY));
       if (saved) return saved;

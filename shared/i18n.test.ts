@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { getLocale, intlLocale, normalizeLocale, serverLocale, setLocale, tr } from './i18n';
+import { getLocale, intlLocale, localeFromQuery, normalizeLocale, serverLocale, setLocale, tr } from './i18n';
 import { EN } from './locales/en';
 import { ES } from './locales/es';
 import { FR } from './locales/fr';
@@ -11,6 +11,16 @@ describe('i18n', () => {
 
   it('os testes rodam em PT, qualquer que seja o idioma da máquina', () => {
     expect(getLocale()).toBe('pt-BR');
+  });
+
+  it('?lang= na URL escolhe o idioma do escritório (e ignora o que não é suportado)', () => {
+    expect(localeFromQuery('?lang=en')).toBe('en');
+    expect(localeFromQuery('?lang=pt-BR')).toBe('pt-BR');
+    expect(localeFromQuery('?lang=fr')).toBe('fr');
+    expect(localeFromQuery('?mock=1&lang=es&speed=3')).toBe('es');
+    expect(localeFromQuery('?lang=de')).toBeUndefined();
+    expect(localeFromQuery('?mock=1')).toBeUndefined();
+    expect(localeFromQuery('')).toBeUndefined();
   });
 
   it('reconhece os formatos de idioma do navegador e do sistema', () => {

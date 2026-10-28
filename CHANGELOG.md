@@ -12,6 +12,9 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **`?lang=en` na URL fixa o idioma da interface.** O parâmetro vale mais que a preferência salva e que o idioma do
+  navegador, e a escolha fica guardada para as próximas visitas (`pt`, `es` e `fr` também valem). Sem ele, tudo
+  continua como era: preferência salva em Configurações › Idioma, senão os idiomas do navegador.
 - **Sessões do Hermes Agent no escritório.** Uma terceira fonte de agentes (`server/sources/hermes/`) lê
   `~/.hermes/state.db` **só para leitura** e mostra as sessões do Hermes como personagens: principais e subagentes,
   com status (`working` pelo turno aberto em `session_turn_leases`, `idle`, `waiting` quando a ferramenta `clarify`

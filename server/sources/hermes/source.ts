@@ -39,6 +39,8 @@ export const SCAN_WINDOW_MS = 12 * 3600_000;
 export const ROOM_WAIT_MS = 20_000;
 /** Atividades lidas ao abrir uma sessão (histórico, sem feed). */
 const SEED_MESSAGES = 8;
+/** Mensagens relidas no boot só para achar o projeto (a sala precisa do repositório, não das últimas falas). */
+const SEED_SCAN_MESSAGES = 60;
 /** Pendência de ferramenta sem resultado por mais que isto vira 'waiting' quando é uma pergunta ao usuário. */
 export const WAIT_MIN_MS = 8_000;
 /** Caminhos guardados por agente para achar o projeto (os primeiros que aparecerem). */
@@ -492,10 +494,24 @@ export class HermesSource implements AgentSource {
 
   /** Histórico inicial: últimas mensagens como histórico (sem feed) e cursor no fim. */
   private seed(a: MainAgent | SubAgent): void {
-    const rows = this.db?.lastMessages(a.sessionId, SEED_MESSAGES) ?? [];
-    for (const m of rows) {
+    const rows = this.db?.lastMessages(a.sessionId, SEED_SCAN_MESSAGES) ?? [];
+    const tail = Math.max(0, rows.length - SEED_MESSAGES);
+    rows.forEach((m, i) => {
       a.cursor = Math.max(a.cursor, m.id);
-      this.applyMessage(a, m, false);
+      // As antigas servem só para achar a sala (o projeto está no começo da conversa, não nas últimas falas).
+      if (i >= tail) this.applyMessage(a, m, false);
+      else if (isMainAgent(a)) this.collectPaths(a, m);
+    });
+  }
+
+  /** Guarda os caminhos absolutos tocados na mensagem (para achar o projeto da sala). */
+  private collectPaths(a: MainAgent, m: HermesMessageRow): void {
+    if (a.paths.length >= MAX_PATHS) return;
+    for (const call of parseToolCalls(m.tool_calls)) {
+      for (const p of absolutePathsIn(call.input)) {
+        if (a.paths.length >= MAX_PATHS) return;
+        if (!a.paths.includes(p)) a.paths.push(p);
+      }
     }
   }
 
@@ -520,12 +536,7 @@ export class HermesSource implements AgentSource {
           const act: Activity = toActivity(`${a.id}#${m.id}:${i}`, at, desc, call.name);
           this.emit(a, act, live);
           if (main && call.id) main.pending.set(call.id, { name: call.name, at });
-          if (main) {
-            for (const p of absolutePathsIn(call.input)) {
-              if (main.paths.length >= MAX_PATHS) break;
-              if (!main.paths.includes(p)) main.paths.push(p);
-            }
-          }
+          if (main) this.collectPaths(a as MainAgent, m);
         });
         return;
       }
