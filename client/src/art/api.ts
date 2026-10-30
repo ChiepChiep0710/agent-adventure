@@ -234,7 +234,12 @@ export type FurnitureKind =
   // --- mobília da câmara de duelo (pedra e ferro no lugar da madeira do acampamento)
   | 'stone_table' // 2x1 mesa de guerra de pedra lavrada (lugar de trabalho, frente).
   | 'stone_table_back' // 2x1 a mesma mesa vista por trás (par da stone_table).
-  | 'stone_stool'; // 1x1 banco de pedra maciço com assento gasto.
+  | 'stone_stool' // 1x1 banco de pedra maciço com assento gasto.
+  | 'rune_mat' // 1x1 esteira de trabalho: tomo aberto, vela e círculo rúnico no chão.
+  | 'anvil_block' // 1x1 bigorna baixa de pedra com martelo encostado.
+  | 'alchemy_pot' // 1x1 caldeirão de pedra em três pés, poção borbulhando.
+  | 'grindstone' // 1x1 roda de amolar em cavalete de madeira.
+  | 'cushion'; // 1x1 almofada de chão (assento: a pessoa senta no piso).
 
 export interface FurnitureDef {
   mount: 'floor' | 'wall';
@@ -347,6 +352,11 @@ export const FURNITURE: Readonly<Record<FurnitureKind, FurnitureDef>> = {
   stone_table: { mount: 'floor', footprint: { w: 2, h: 1 }, blocks: true },
   stone_table_back: { mount: 'floor', footprint: { w: 2, h: 1 }, blocks: true },
   stone_stool: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: false, seat: true },
+  rune_mat: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: false },
+  anvil_block: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: false },
+  alchemy_pot: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: false },
+  grindstone: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: false },
+  cushion: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: false, seat: true },
 };
 
 export type FloorKind =

@@ -26,6 +26,8 @@ function roomsFor(slots: number[]): AreaLayout[] {
   return slots.map((slot) => layoutProjectRoom({ id: `/proj/${slot}`, slot, seed: 1000 + slot * 77 }, theme));
 }
 
+const STATIONS = ['rune_mat', 'anvil_block', 'alchemy_pot', 'grindstone'] as const;
+
 describe('mapeamento de slots', () => {
   it('coluna = núcleo + floor(slot/2); par = norte, ímpar = sul', () => {
     expect(slotColumn(0)).toBe(2);
@@ -288,10 +290,11 @@ describe('arena da masmorra (skin de fantasia)', () => {
     expect(a.walls.some((w) => w.kind === 'south')).toBe(true);
     // 6 mesas de guerra (3 de cada lado do poço), a armaria do duelo e o cenário do bioma
     const fk = new Set(a.furniture.map((f) => f.kind));
-    for (const k of ['stone_table', 'stone_table_back', 'brazier', 'weapon_rack', 'armor_stand', 'bench_stone'] as const) {
+    for (const k of ['rune_mat', 'anvil_block', 'alchemy_pot', 'grindstone', 'cushion', 'brazier', 'weapon_rack'] as const) {
       expect(fk.has(k), k).toBe(true);
     }
-    expect(a.furniture.filter((f) => f.kind === 'stone_table' || f.kind === 'stone_table_back')).toHaveLength(6);
+    const works = a.furniture.filter((f) => STATIONS.includes(f.kind));
+    expect(works).toHaveLength(6);
     expect(a.furniture.some((f) => v.biome.props.includes(f.kind)), `cenário do bioma ${v.biome.id}`).toBe(true);
     expect(a.furniture.some((f) => f.kind === 'chest' || f.kind === 'cage')).toBe(true);
     // itens de parede: grade levadiça, corrente, tochas, estandartes do tema e as marcas do bioma
@@ -301,7 +304,7 @@ describe('arena da masmorra (skin de fantasia)', () => {
     expect(a.wallItems.filter((w) => w.kind === 'banner' && w.variant !== undefined)).toHaveLength(2);
   });
 
-  it('cada banco senta no meio da sua mesa de pedra (nada de herói no canto da mesa)', () => {
+  it('cada almofada senta no meio da sua estação de trabalho', () => {
     for (const seed of [7, 99, 4242]) {
       const a = arena(0, seed);
       const desks = a.spots.filter((sp) => sp.kind === 'desk');
@@ -310,7 +313,7 @@ describe('arena da masmorra (skin de fantasia)', () => {
         const table = a.furniture.find((it) => it.id === sp.deskId)!;
         expect(table, `${sp.id} sem mesa`).toBeTruthy();
         const def = FURNITURE[table.kind];
-        expect(def.footprint.w, sp.id).toBe(2);
+        expect(def.footprint.w, sp.id).toBe(1);
         const center = table.tx * TILE + (table.dx ?? 0) + (def.footprint.w * TILE) / 2;
         expect(Math.abs(sp.tx * TILE + TILE / 2 - center), `${sp.id} fora do meio da mesa`).toBeLessThanOrEqual(1);
       }
@@ -503,7 +506,8 @@ describe('biomas da masmorra: cada câmara nasce num clima diferente', () => {
     for (const bio of DUNGEON_BIOMES) {
       const seed = Array.from({ length: 500 }, (_, i) => (i * 104729 + 11) >>> 0).find((sd) => dungeonBiome(sd, 1).id === bio.id)!;
       const a = layoutProjectArena({ id: `/p/${bio.id}`, slot: 0, seed }, dungeonTheme);
-      expect(a.furniture.filter((f) => f.kind === 'stone_table' || f.kind === 'stone_table_back')).toHaveLength(6);
+      const works = a.furniture.filter((f) => STATIONS.includes(f.kind));
+    expect(works).toHaveLength(6);
       const kinds = new Set(a.floors.map((f) => f.kind));
       expect(kinds.has(bio.base), bio.id).toBe(true);
       expect(kinds.has(bio.pit), bio.id).toBe(true);

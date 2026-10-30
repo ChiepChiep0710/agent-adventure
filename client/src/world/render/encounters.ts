@@ -433,7 +433,7 @@ function blit(
 }
 
 /** Barra de vida de 3 px acima do monstro (verde -> amarela -> vermelha). */
-function drawHpBar(ctx: CanvasRenderingContext2D, x: number, y: number, hp: number, alpha: number): void {
+export function drawHpBar(ctx: CanvasRenderingContext2D, x: number, y: number, hp: number, alpha: number): void {
   const w = 18;
   const h = 3;
   const left = Math.round(x - w / 2);

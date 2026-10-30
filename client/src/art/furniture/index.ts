@@ -199,6 +199,16 @@ function build(kind: FurnitureKind, variant: string | undefined, state: number, 
       return O.deskBack(variant, seed);
     case 'stone_stool':
       return O.stool();
+    case 'rune_mat':
+      return O.stool();
+    case 'anvil_block':
+      return O.filingCabinet();
+    case 'alchemy_pot':
+      return O.plantSmall('small', seed);
+    case 'grindstone':
+      return O.trashBin();
+    case 'cushion':
+      return O.stool();
   }
 }
 

@@ -2253,6 +2253,147 @@ export function stoneStool(seed: number): BufFurniture {
   return { base: s };
 }
 
+/** Esteira de trabalho no chão: tomo aberto, vela acesa e círculo rúnico riscado na pedra. */
+export function runeMat(seed: number): BufFurniture {
+  const s = floorSheet(1, 1, 8);
+  const b = s.buf;
+  const r = rngOf(seed, 91);
+  // esteira de palha gasta
+  b.rect(1, 10, 14, 5, '#6b5a3a');
+  b.hline(1, 14, 10, '#8a7448');
+  b.hline(2, 13, 14, '#4a3e28');
+  for (let i = 0; i < 5; i++) b.set(2 + Math.floor(r() * 12), 11 + Math.floor(r() * 4), '#54462d');
+  // círculo rúnico riscado no piso, à frente
+  b.ellipse(8, 13.5, 4, 1.6, '#7de0ff');
+  b.hline(5, 11, 13, '#3a3f4a');
+  // tomo aberto em cima da esteira
+  b.rect(3, 7, 10, 4, '#c9b48a');
+  b.hline(3, 12, 7, '#e6d6ae');
+  b.vline(8, 7, 10, '#8a7a56');
+  b.hline(4, 7, 8, '#5b4d36');
+  b.hline(9, 11, 8, '#5b4d36');
+  // vela curta com chama
+  b.rect(12, 6, 2, 4, '#d9cba6');
+  b.set(12, 5, '#ffce4a');
+  b.set(12, 4, '#fff0a8');
+  // penas/tinteiro ao lado
+  b.rect(1, 7, 2, 3, '#2b2a33');
+  b.set(2, 6, '#e6d6ae');
+  b.outline();
+  contact(b, 1, 15, 14, 2, 0.22);
+  return { base: s };
+}
+
+/** Bigorna baixa de pedra: base maciça, bigorna de ferro e martelo encostado. */
+export function anvilBlock(seed: number): BufFurniture {
+  const s = floorSheet(1, 1, 9);
+  const b = s.buf;
+  const r = rngOf(seed, 57);
+  // bloco de pedra
+  b.rect(2, 10, 12, 5, DP.base);
+  b.hline(2, 13, 10, DP.lt);
+  b.vline(2, 10, 14, DP.lt);
+  b.vline(13, 10, 14, DP.dk);
+  // bigorna de ferro sobre o bloco
+  b.rect(4, 6, 8, 4, F.iron.base);
+  b.hline(3, 12, 6, F.iron.lt);
+  b.hline(4, 11, 5, F.iron.lt);
+  b.rect(5, 8, 6, 2, F.iron.dk);
+  b.set(2, 6, F.iron.dk);
+  b.set(13, 6, F.iron.dk);
+  // martelo encostado à direita
+  b.line(14, 14, 12, 8, '#6b4f39');
+  b.rect(11, 6, 4, 3, F.iron.base);
+  b.hline(11, 14, 6, F.iron.lt);
+  // faíscas/farpa no chão
+  for (let i = 0; i < 3; i++) b.set(3 + Math.floor(r() * 10), 15, '#8d8578');
+  b.outline();
+  contact(b, 2, 15, 12, 2, 0.3);
+  return { base: s };
+}
+
+/** Caldeirão de pedra em três pés, com poção verde borbulhando e ervas penduradas. */
+export function alchemyPot(seed: number): BufFurniture {
+  const s = floorSheet(1, 1, 9);
+  const b = s.buf;
+  const r = rngOf(seed, 63);
+  // pedras do fogareiro
+  for (const x of [2, 6, 10]) b.rect(x, 12, 4, 3, DP.dk);
+  b.hline(2, 13, 15, '#2b241f');
+  // caldeirão bojudo
+  b.ellipse(8, 9, 5.5, 4.5, '#3f3a36');
+  b.ellipse(8, 8.5, 4.5, 3.2, '#4d4640');
+  // poção
+  b.ellipse(8, 7.5, 4, 1.8, '#7bd46a');
+  b.hline(5, 11, 7, '#a8f08f');
+  // bolhas
+  for (let i = 0; i < 3; i++) b.set(6 + Math.floor(r() * 5), 5 + Math.floor(r() * 2), '#d6ffb0');
+  // borda de ferro e alça
+  b.hline(4, 12, 9, F.iron.dk);
+  b.set(3, 8, F.iron.base);
+  b.set(13, 8, F.iron.base);
+  // ervas penduradas na alça
+  b.line(13, 9, 14, 12, '#5d8a4a');
+  b.set(14, 12, '#8fc46a');
+  b.outline();
+  contact(b, 3, 15, 10, 2, 0.28);
+  return { base: s };
+}
+
+/** Roda de amolar em cavalete de madeira, com balde de água ao lado. */
+export function grindstone(seed: number): BufFurniture {
+  const s = floorSheet(1, 1, 9);
+  const b = s.buf;
+  const r = rngOf(seed, 71);
+  // cavalete
+  b.line(3, 15, 6, 7, '#6b4f39');
+  b.line(13, 15, 10, 7, '#6b4f39');
+  b.hline(3, 13, 15, '#4a3728');
+  // roda de pedra
+  b.ellipse(8, 6, 5, 5, DP.base);
+  b.ellipse(8, 6, 3.4, 3.4, DP.lt);
+  b.ellipse(8, 6, 1.2, 1.2, DP.dk);
+  b.line(4, 3, 12, 9, DP.dk);
+  // eixo
+  b.hline(3, 13, 6, F.iron.dk);
+  // balde
+  b.rect(12, 12, 3, 3, '#5a4a36');
+  b.hline(12, 14, 12, '#7a6648');
+  b.set(13, 13, '#4fc3b8');
+  // respingos na pedra
+  for (let i = 0; i < 4; i++) b.set(4 + Math.floor(r() * 8), 14 + Math.floor(r() * 2), '#7d756a');
+  b.outline();
+  contact(b, 3, 15, 11, 2, 0.24);
+  return { base: s };
+}
+
+/** Almofada de chão (assento baixo): a pessoa senta no piso, sem móvel alto na frente. */
+export function cushion(variant: string | undefined): BufFurniture {
+  const s = floorSheet(1, 1, 8);
+  const b = s.buf;
+  const tones: Record<string, [string, string, string]> = {
+    red: ['#7d3b3b', '#a85a5a', '#4d2626'],
+    blue: ['#3b4d7d', '#5a6da8', '#26304d'],
+    green: ['#3b6b4a', '#5a9a6e', '#26452e'],
+    gold: ['#7d653b', '#a8955a', '#4d3f26'],
+    violet: ['#553b7d', '#7a5aa8', '#33264d'],
+    teal: ['#3b6b7d', '#5a95a8', '#26454d'],
+    tan: ['#6b5a3a', '#8a7448', '#4a3e28'],
+  };
+  const [base, lt, dk] = tones[variant ?? 'tan'] ?? tones.tan;
+  // almofada achatada com vinco central e franjas nos cantos
+  b.ellipse(8, 12, 6, 2.6, base);
+  b.ellipse(8, 11, 5.4, 2.2, lt);
+  b.hline(4, 11, 11, dk);
+  b.set(3, 13, dk);
+  b.set(12, 13, dk);
+  b.set(5, 9, lt);
+  for (const x of [3, 13]) b.set(x, 14, '#c8a25a');
+  b.outline();
+  contact(b, 2, 15, 12, 2, 0.18);
+  return { base: s };
+}
+
 /** Mesa de guerra vista por trás (lugar de trabalho de quem senta ao norte): travessa, maça e lanterna. */
 export function campTableBack(variant: string | undefined, seed: number): BufFurniture {
   const s = floorSheet(2, 1, 16);
@@ -3364,6 +3505,16 @@ export function fantasyBuild(kind: FurnitureKind, variant: string | undefined, s
       return stoneTableBack(seed);
     case 'stone_stool':
       return stoneStool(seed);
+    case 'rune_mat':
+      return runeMat(seed);
+    case 'anvil_block':
+      return anvilBlock(seed);
+    case 'alchemy_pot':
+      return alchemyPot(seed);
+    case 'grindstone':
+      return grindstone(seed);
+    case 'cushion':
+      return cushion(variant);
     case 'camp_table':
       return campTable(variant, seed);
     case 'camp_table_back':

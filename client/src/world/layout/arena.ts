@@ -163,21 +163,20 @@ export function layoutProjectArena(room: RoomInput, theme: RoomTheme): AreaLayou
   const wallSpots = [4.3, 13.6];
   biome.wallProps.slice(0, wallSpots.length).forEach((k, i) => wallItem(k, wallSpots[i], undefined, { order: 0.18 + i * 0.01 }));
 
-  // ---- mesas de guerra: os 6 lugares de trabalho (3 ao norte, 3 ao sul do poço), com banqueta.
-  // Mesmos ranks/lados/deskId da ilha de mesas da sala; quem senta continua "na mesa".
+  // ---- estações de trabalho BAIXAS: os 6 lugares de trabalho (3 ao norte, 3 ao sul do poço).
+  // Nada de mesa alta: cada dupla usa uma peça do ofício (esteira de runas, bigorna, caldeirão,
+  // roda de amolar) e a pessoa senta numa almofada no chão. Assim a câmara continua com os 6
+  // lugares (mesmo deskId/rank/side) sem tapar a luta no poço.
   const deskV = theme.deskVariant;
   const chairV = theme.chairVariant;
-  // A mesa fica ATRÁS do banco (o herói senta de costas para a mesa e de frente para o poço): assim
-  // nada se desenha na frente de quem duela e a cena de luta (nos pés, ao lado) fica à vista.
   const ranks = [2, 0, 4];
+  const works = ['rune_mat', 'anvil_block', 'alchemy_pot', 'grindstone'] as const;
   for (let i = 0; i < 3; i++) {
     const lx = 2 + i * 2;
-    // mesa de guerra de PEDRA (nada de madeira de acampamento dentro da câmara)
-    // a mesa de 2 tiles é puxada meio tile para a esquerda, assim o banco de 1 tile fica no MEIO dela
-    const back = furn('stone_table_back', lx, 2, undefined, { dx: -TILE / 2, order: 0.2 + i * 0.02, seat: `N${i}` });
-    const front = furn('stone_table', lx, 7, undefined, { dx: -TILE / 2, order: 0.3 + i * 0.02, seat: `S${i}` });
-    seat('desk', 'stone_stool', lx, 3, 'down', undefined, { deskId: back, rank: ranks[i] + 1, side: 'N', order: 0.55 + i * 0.03 });
-    seat('desk', 'stone_stool', lx, 8, 'up', undefined, { deskId: front, rank: ranks[i], side: 'S', order: 0.6 + i * 0.03 });
+    const back = furn(works[(i + 1) % works.length], lx, 2, undefined, { order: 0.2 + i * 0.02, seat: `N${i}` });
+    const front = furn(works[i % works.length], lx, 7, undefined, { order: 0.3 + i * 0.02, seat: `S${i}` });
+    seat('desk', 'cushion', lx, 3, 'down', chairV, { deskId: back, rank: ranks[i] + 1, side: 'N', order: 0.55 + i * 0.03 });
+    seat('desk', 'cushion', lx, 8, 'up', chairV, { deskId: front, rank: ranks[i], side: 'S', order: 0.6 + i * 0.03 });
   }
 
   // ---- quadro de missões: os agentes leem as missões no quadro da parede
@@ -187,12 +186,12 @@ export function layoutProjectArena(room: RoomInput, theme: RoomTheme): AreaLayou
   furn('brazier', 2, 5, undefined, { order: 0.44 });
   if (v.braziers > 1) furn('brazier', 13, 5, undefined, { order: 0.45 });
 
-  // ---- arquibancada: banco de pedra encostado na parede norte (2 lugares) + 2 tocos nos cantos.
+  // ---- arquibancada: banco de pedra encostado na parede norte (2 lugares) + 2 almofadas nos cantos.
   // Tudo longe do miolo: o poço e a volta das mesas de guerra ficam livres para a luta.
   const bench = furn('bench_stone', 11, 2, undefined, { order: 0.22 });
   for (let i = 0; i < 2; i++) seat('stool', 'bench_stone', 11 + i, 2, 'down', undefined, { noFurniture: true, furnitureId: bench, order: 0.62 + i * 0.02 });
-  seat('stool', 'stone_stool', 14, 2, 'left', undefined, { order: 0.64 });
-  seat('stool', 'stone_stool', 1, 2, 'right', undefined, { order: 0.65 });
+  seat('stool', 'cushion', 14, 2, 'left', chairV, { order: 0.64 });
+  seat('stool', 'cushion', 1, 2, 'right', chairV, { order: 0.65 });
 
   // ---- armaria do duelo (sempre) + o cenário do bioma nas bordas
   furn('weapon_rack', 1, 10, undefined, { order: 0.26 });

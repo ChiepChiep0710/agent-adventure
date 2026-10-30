@@ -25,6 +25,7 @@ const REPLACED: FurnitureKind[] = [
 const DUNGEON: FurnitureKind[] = [
   'sarcophagus', 'bone_pile', 'mushroom_cluster', 'crystal_shard', 'ice_spike', 'lava_pool', 'web_wall',
   'stone_table', 'stone_table_back', 'stone_stool',
+  'rune_mat', 'anvil_block', 'alchemy_pot', 'grindstone', 'cushion',
 ];
 
 /** Kinds só das câmaras de fantasia (sem equivalente no escritório): só precisam renderizar na fantasia. */

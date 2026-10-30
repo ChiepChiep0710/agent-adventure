@@ -9,6 +9,13 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), e
 do meio (0.**3**.0).
 
 ## [Não lançado]
+- Skin de fantasia: cada câmara ganhou um CHEFE residente no centro do poço (Múmia de Arenito, Rei
+  dos Ossos, Golem de Magma, Guardião de Gelo, Horror de Musgo, Rainha de Cristal, Rei Afogado), com
+  nome, barra de vida e pose de golpe quando alguém da sala está trabalhando. Ele não segue ninguém:
+  é parte do cenário do bioma.
+- Skin de fantasia: as mesas de guerra de pedra saíram das câmaras. Os 6 lugares de trabalho viraram
+  estações baixas (esteira de runas com tomo e vela, bigorna, caldeirão de alquimia, roda de amolar)
+  e as pessoas sentam em almofadas no chão — a luta no poço fica à vista.
 
 ### Adicionado
 

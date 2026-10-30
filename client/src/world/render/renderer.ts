@@ -27,6 +27,8 @@ import { characterCostume, type FantasyClassInput } from './fantasy-class';
 import { drawEncounter, heroHitPulse, type EncounterActor } from './encounters';
 import { shouldDrawRoadMarkings } from './skin-props';
 import { decorateElevator, drawSeasonalLights, drawSeasonalWindow, seasonalFurniture } from './seasonal';
+import { bossPose, drawRoomBoss } from './boss';
+import { dungeonBiome } from '../layout/dungeon-biome';
 import { buildAreaVis, furnitureSprites, opaqueBounds, paintShell, toWallVis, WALL_MARGIN, wallItemOrigin, wallSprites, type AreaVis, type FurnVis, type WallVis } from './scene';
 
 const enum K {
@@ -35,14 +37,26 @@ const enum K {
   Char,
   Prop,
   Car,
+  Boss,
 }
 
 interface Ent {
   k: K;
   y: number;
-  ref: FurnVis | Character | ExteriorProp | Car | null;
+  ref: FurnVis | Character | ExteriorProp | Car | BossEnt | null;
   area: AreaVis | null;
   scale: number;
+}
+
+/** Chefe da sala: fica parado no poço da arena (não segue ninguém). */
+interface BossEnt {
+  biome: ReturnType<typeof dungeonBiome>['id'];
+  seed: number;
+  x: number;
+  y: number;
+  heroes: number;
+  /** 0..1: acompanha o aparecer/sumir da sala (construção/desmonte). */
+  alpha: number;
 }
 
 interface Car {
@@ -436,6 +450,11 @@ export class Renderer {
         const fs = furnitureSprites(this.art, f, this.furnState(f, now));
         if (fs?.front) push(K.FurnFront, f.ay + 0.5, f, vis, s);
       }
+      // chefe da câmara: parado no poço, como parte do cenário (skin de fantasia)
+      if (isFantasy() && vis.room && vis.layout.kind === 'room') {
+        const boss = this.bossOf(vis, now);
+        if (boss) push(K.Boss, boss.y, boss, vis, boss.alpha);
+      }
     }
     // os agentes e, na visita, o visitante
     for (const ch of this.sim.people()) {
@@ -501,6 +520,12 @@ export class Renderer {
         case K.Car:
           this.drawCar(e.ref as Car);
           break;
+        case K.Boss: {
+          const b = e.ref as BossEnt;
+          const pose = bossPose(b.biome, b.seed, b.heroes, now);
+          drawRoomBoss(ctx, pose, b.x, b.y, now, e.scale, this.worldScale >= MIN_ENCOUNTER_SCALE);
+          break;
+        }
       }
     }
     this.drawPingPong(now);
@@ -871,6 +896,27 @@ export class Renderer {
       moving: ch.step !== null,
       seated: ch.seated,
     };
+  }
+
+  /**
+   * Chefe da câmara (skin de fantasia): fica no poço da arena, parado. A única entrada "viva" é o
+   * número de agentes trabalhando naquela sala — nada é inventado aqui.
+   */
+  private bossOf(vis: AreaVis, now: number): BossEnt | null {
+    const room = vis.room;
+    if (!room) return null;
+    const anim = buildAnim(room.phase, room.progress(now));
+    const alpha = anim.mode === 'none' ? 1 : furnitureScale(anim, 0);
+    if (alpha <= 0.01) return null;
+    const seed = room.seed;
+    let heroes = 0;
+    for (const ch of this.sim.people()) {
+      if (ch.roomId !== vis.id || ch.info.status !== 'working') continue;
+      if (ch.alpha > 0.5) heroes++;
+    }
+    const r = vis.layout.rect;
+    // miolo do poço: colunas 4–7, linhas 4–6 do layout da arena -> centro (coluna 6, pé na linha 7)
+    return { biome: dungeonBiome(seed, 1).id, seed, x: (r.x + 6) * TILE, y: (r.y + 7) * TILE, heroes, alpha };
   }
 
   private drawCharacter(ch: Character, now: number, sel: { agent: string | null; hover: string | null }): void {
