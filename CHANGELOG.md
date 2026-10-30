@@ -9,6 +9,11 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), e
 do meio (0.**3**.0).
 
 ## [Não lançado]
+
+## [1.1.0] - 2026-10-30
+
+### Adicionado
+
 - Skin de fantasia: com chefe na câmara, o personagem luta CONTRA ele — some o monstro próprio, o
   golpe (bola de fogo, adaga, luz, martelo) sai na direção do chefe com o impacto nele, e o chefe
   alterna golpe/ferido no ciclo de briga.
@@ -19,9 +24,6 @@ do meio (0.**3**.0).
 - Skin de fantasia: as mesas de guerra de pedra saíram das câmaras. Os 6 lugares de trabalho viraram
   estações baixas (esteira de runas com tomo e vela, bigorna, caldeirão de alquimia, roda de amolar)
   e as pessoas sentam em almofadas no chão — a luta no poço fica à vista.
-
-### Adicionado
-
 - **Skin de fantasia (RPG clássico).** `?skin=fantasy` (ou `rpg`) troca pisos, paredes, temas de sala e a paleta dos
   painéis por pedra, madeira velha e pergaminho com linhas douradas; `?skin=office` volta ao escritório, e a escolha
   fica salva no navegador. O escritório continua sendo o padrão. Na mesma pele, os móveis viram objetos de RPG: mesas
@@ -649,6 +651,7 @@ Primeira versão publicada.
   cada uma (tap de statusline), além de feed de atividade, avisos e modo demonstração. Roda no Node ou no Docker local.
 
 [Não lançado]: https://github.com/marmottajr/habblaud/compare/v1.0.3...HEAD
+[1.1.0]: https://github.com/ChiepChiep0710/agent-adventure/releases/tag/v1.1.0
 [1.0.3]: https://github.com/marmottajr/habblaud/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/marmottajr/habblaud/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/marmottajr/habblaud/compare/v1.0.0...v1.0.1
