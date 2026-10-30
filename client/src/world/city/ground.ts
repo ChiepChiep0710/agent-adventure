@@ -6,6 +6,7 @@ import { TILE, type ArtModule } from '../../art/api';
 import { mulberry32 } from '../../../../shared/hash';
 import { BLOCK_TILES, DOOR, FOUNTAIN, LOT, SIDEWALK } from '../../../../shared/world/city';
 import { cellSurfaces, type GardenKind } from './layout';
+import { shouldDrawRoadMarkings } from '../render/skin-props';
 
 type Ctx = CanvasRenderingContext2D;
 
@@ -85,23 +86,27 @@ function paintStreets(art: ArtModule, ctx: Ctx, seed: number): void {
   const oh = T(s.sidewalkOuter.h);
   ctx.fillRect(ow, 0, 3, oh);
   ctx.fillRect(0, oh, ow, 3);
-  // faixa central tracejada
-  ctx.fillStyle = 'rgba(255,226,140,0.85)';
-  for (const [x0, y0, x1, y1] of s.laneMarks) {
-    if (y0 === y1) for (let x = T(x0); x < T(x1) - 8; x += 24) ctx.fillRect(x, T(y0) - 1, 12, 2);
-    else for (let y = T(y0); y < T(y1) - 8; y += 24) ctx.fillRect(T(x0) - 1, y, 2, 12);
+  // faixa central tracejada e faixas de pedestres: a pista da skin de fantasia é de pedra, sem
+  // pintura viária (meio-fio, sarjeta e bueiros continuam iguais)
+  const marks = shouldDrawRoadMarkings();
+  if (marks) {
+    ctx.fillStyle = 'rgba(255,226,140,0.85)';
+    for (const [x0, y0, x1, y1] of s.laneMarks) {
+      if (y0 === y1) for (let x = T(x0); x < T(x1) - 8; x += 24) ctx.fillRect(x, T(y0) - 1, 12, 2);
+      else for (let y = T(y0); y < T(y1) - 8; y += 24) ctx.fillRect(T(x0) - 1, y, 2, 12);
+    }
+    // faixas de pedestres (zebra): barras no sentido do trânsito, empilhadas na travessia
+    for (const cw of s.crosswalks) {
+      const r = cw.rect;
+      ctx.fillStyle = 'rgba(244,244,236,0.9)';
+      if (cw.across === 'ns') for (let y = T(r.y) + 4; y < T(r.y + r.h) - 3; y += 6) ctx.fillRect(T(r.x) + 3, y, T(r.w) - 6, 3);
+      else for (let x = T(r.x) + 4; x < T(r.x + r.w) - 3; x += 6) ctx.fillRect(x, T(r.y) + 3, 3, T(r.h) - 6);
+    }
+    // linha de parada antes do cruzamento
+    ctx.fillStyle = 'rgba(244,244,236,0.75)';
+    ctx.fillRect(ow - 2, oh + 2, 2, T(2) - 2);
+    ctx.fillRect(ow + T(3), oh - 2, T(2) - 2, 2);
   }
-  // faixas de pedestres (zebra): barras no sentido do trânsito, empilhadas na travessia
-  for (const cw of s.crosswalks) {
-    const r = cw.rect;
-    ctx.fillStyle = 'rgba(244,244,236,0.9)';
-    if (cw.across === 'ns') for (let y = T(r.y) + 4; y < T(r.y + r.h) - 3; y += 6) ctx.fillRect(T(r.x) + 3, y, T(r.w) - 6, 3);
-    else for (let x = T(r.x) + 4; x < T(r.x + r.w) - 3; x += 6) ctx.fillRect(x, T(r.y) + 3, 3, T(r.h) - 6);
-  }
-  // linha de parada antes do cruzamento
-  ctx.fillStyle = 'rgba(244,244,236,0.75)';
-  ctx.fillRect(ow - 2, oh + 2, 2, T(2) - 2);
-  ctx.fillRect(ow + T(3), oh - 2, T(2) - 2, 2);
   // bueiros e tampas de inspeção
   const rng = mulberry32(seed);
   for (let i = 0; i < 3; i++) {

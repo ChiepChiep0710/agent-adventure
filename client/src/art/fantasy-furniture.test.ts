@@ -15,6 +15,9 @@ const REPLACED: FurnitureKind[] = [
   'meeting_table', 'whiteboard', 'window', 'poster', 'painting', 'tv', 'clock', 'coffee_machine',
   'fridge', 'vending_machine', 'microwave', 'sofa', 'armchair', 'beanbag', 'arcade', 'pingpong_table',
   'stool', 'cafe_table', 'coffee_table',
+  // segunda leva: o resto dos móveis modernos (divisória, copa, banheiro, recepção e parede)
+  'glass_partition', 'counter', 'counter_sink', 'cafe_chair', 'toilet_stall', 'sink', 'reception_desk',
+  'bench', 'mirror', 'shelf_wall', 'sign', 'door_frame', 'light_switch', 'elevator',
 ];
 
 /** Resumo FNV-1a dos bytes (sprites iguais byte a byte dão o mesmo resumo). */
@@ -89,9 +92,73 @@ describe('móveis da skin de fantasia', () => {
     expect(renderFurniture('arcade').base.rects?.screen).toBeDefined();
   });
 
+  it('a placa vira tabuleta com área de texto clara (o render escreve o nome escuro) e mantém rects.sign', () => {
+    setSkinForTests('fantasy');
+    const s = renderFurniture('sign').base;
+    const r = s.rects?.sign;
+    expect(r).toBeDefined();
+    if (!r) return;
+    // Média de luminância dentro do pergaminho: tem que ser clara (> 120) para o texto escuro.
+    const d = s.buf.data;
+    let sum = 0;
+    let n = 0;
+    for (let y = r.y; y < r.y + r.h; y++) {
+      for (let x = r.x; x < r.x + r.w; x++) {
+        const i = (y * s.buf.w + x) * 4;
+        if (d[i + 3] < 128) continue;
+        sum += 0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2];
+        n++;
+      }
+    }
+    expect(n).toBeGreaterThan(0);
+    expect(sum / n).toBeGreaterThan(120);
+  });
+
+  it('o espelho mantém a região refletora (rects.glass), como o original', () => {
+    setSkinForTests('office');
+    expect(renderFurniture('mirror').base.rects?.glass).toBeDefined();
+    setSkinForTests('fantasy');
+    const g = renderFurniture('mirror').base.rects?.glass;
+    expect(g).toBeDefined();
+    if (g) expect(g.w * g.h).toBeGreaterThan(40);
+  });
+
+  it('elevador e privada guardam a semântica de estado (portão sobe, porta abre)', () => {
+    setSkinForTests('office');
+    const officeElevator = [0, 4].map((st) => digest(renderFurniture('elevator', undefined, st).base.buf.data));
+    setSkinForTests('fantasy');
+    const closed = renderFurniture('elevator', undefined, 0).base;
+    const open = renderFurniture('elevator', undefined, 4).base;
+    expect(digest(closed.buf.data)).not.toBe(digest(open.buf.data));
+    // Cada estado do elevador muda o sprite (as folhas/grade andam) e nenhum é o do escritório.
+    for (let st = 0; st < 5; st++) {
+      const d = digest(renderFurniture('elevator', undefined, st).base.buf.data);
+      expect(d).not.toBe(officeElevator[st === 4 ? 1 : 0]);
+    }
+    setSkinForTests('office');
+    const officeStall = renderFurniture('toilet_stall', undefined, 1);
+    setSkinForTests('fantasy');
+    const free = renderFurniture('toilet_stall', undefined, 0);
+    const busy = renderFurniture('toilet_stall', undefined, 1);
+    expect(free.front).toBeDefined();
+    expect(busy.front).toBeDefined();
+    expect(digest(free.front!.buf.data)).not.toBe(digest(busy.front!.buf.data));
+    expect(officeStall.front).toBeDefined();
+    expect(digest(busy.front!.buf.data)).not.toBe(digest(officeStall.front!.buf.data));
+  });
+
+  it('variantes da divisória e da bancada têm desenhos próprios', () => {
+    setSkinForTests('fantasy');
+    const g = (v: string) => digest(renderFurniture('glass_partition', v).base.buf.data);
+    expect(g('h')).not.toBe(g('v'));
+    expect(g('v')).not.toBe(g('end'));
+    const c = (v: string) => digest(renderFurniture('counter', v).base.buf.data);
+    expect(c('plain')).not.toBe(c('drawers'));
+  });
+
   it('é determinístico: mesma seed, mesmo sprite', () => {
     setSkinForTests('fantasy');
-    for (const kind of ['desk', 'bookshelf', 'meeting_table', 'painting'] as const) {
+    for (const kind of ['desk', 'bookshelf', 'meeting_table', 'painting', 'shelf_wall', 'reception_desk'] as const) {
       const a = renderFurniture(kind, undefined, 0, 3).base.buf.data;
       const b = renderFurniture(kind, undefined, 0, 3).base.buf.data;
       expect(digest(a)).toBe(digest(b));

@@ -1483,12 +1483,61 @@ function itemPos(dc: Dc): Pt | null {
 
 // ---------------------------------------------------------------- composição
 
+/** Caixa do tronco já desenhado: frente/costas em 8..15; de perfil 8..14, deslocado pelo balanço. */
+function torsoBox(dc: Dc): { x: number; y: number; w: number } {
+  const { r } = dc;
+  return { x: r.view === 'side' ? 8 + r.lean : 8, y: 18 + r.ub, w: r.view === 'side' ? 7 : 8 };
+}
+
+function hexOf(b: PixelBuf, x: number, y: number): string {
+  return `#${(pixelKey(b, x, y) & 0xffffff).toString(16).padStart(6, '0')}`;
+}
+
+/**
+ * Veste o tronco (manto, peitoral, avental...) tingindo só os pixels que já existem ali: nada é pintado
+ * fora do corpo, então a roupa da classe acompanha todas as direções, poses e o sentar sem desalinhar.
+ * `cols` limita as colunas (índices dentro do tronco) para peças que cobrem só o centro.
+ */
+function dressTorso(dc: Dc, tint: string, k: number, cols?: readonly [number, number]): void {
+  const { b } = dc;
+  const box = torsoBox(dc);
+  const x0 = box.x + (cols ? cols[0] : 0);
+  const x1 = box.x + (cols ? cols[1] : box.w - 1);
+  for (let yy = box.y; yy < box.y + 6; yy++) {
+    for (let xx = x0; xx <= x1; xx++) {
+      if (b.alpha(xx, yy) < 200) continue;
+      b.set(xx, yy, mix(hexOf(b, xx, yy), tint, k));
+    }
+  }
+}
+
+/** Detalhe de roupa: só aparece onde o corpo já foi desenhado (não cria pixel solto no vazio). */
+function dressAt(dc: Dc, x: number, y: number, c: string): void {
+  if (dc.b.alpha(x, y) >= 200) dc.b.set(x, y, c);
+}
+
+/**
+ * Capuz que emoldura o rosto (sem cobri-lo): copa sobre o cabelo, debrum na testa e laterais até o
+ * queixo, onde vira uma gola larga. Fica na mesma âncora da cabeça, então segue o balanço e o cochilo.
+ */
+function drawHood(dc: Dc, x: number, y: number, main: string, trim: string): void {
+  const { b } = dc;
+  b.rect(x + 1, y + 2, 12, 4, main); // copa
+  b.rect(x + 2, y + 2, 10, 1, trim); // brilho no alto
+  b.hline(x + 1, x + 12, y + 5, trim); // debrum sobre a testa
+  b.rect(x + 1, y + 6, 2, 8, main); // laterais (deixam olhos e boca à mostra)
+  b.rect(x + 11, y + 6, 2, 8, main);
+  b.rect(x + 1, y + 15, 12, 2, main); // gola larga sobre os ombros (abaixo do queixo)
+  b.hline(x + 2, x + 11, y + 15, trim);
+}
+
 /** Usa o mesmo rig da cabeça para acompanhar quique, cochilo e poses sentadas. */
 function drawCostume(dc: Dc, costume: CharacterFrameRequest['costume']): void {
   if (!costume) return;
   const { b, r } = dc;
   const x = HX + r.lean;
   const y = HY + r.ub + r.hd;
+  const box = torsoBox(dc);
   if (costume === 'santa') {
     b.rect(x + 2, y, 9, 4, '#c93945');
     b.rect(x + 4, y - 2, 5, 2, '#e95452');
@@ -1510,8 +1559,62 @@ function drawCostume(dc: Dc, costume: CharacterFrameRequest['costume']): void {
     b.vline(x + 4, y + 1, y + 4, '#f9ae48');
     b.vline(x + 8, y + 1, y + 4, '#f9ae48');
     b.hline(x + 2, x + 11, y + 5, '#8d4930');
+  } else if (costume === 'mage') {
+    // Mago: chapéu pontudo azul com estrela, manto azul-arroxeado e cinto dourado.
+    b.rect(x + 6, y - 2, 2, 2, '#3b4a9c');
+    b.rect(x + 5, y, 4, 2, '#4657b8');
+    b.rect(x + 2, y + 2, 9, 3, '#3b4a9c');
+    b.rect(x + 4, y + 2, 2, 2, '#5468cc');
+    b.hline(x + 2, x + 10, y + 4, '#e6c65c');
+    b.set(x + 8, y + 3, '#ffe98a');
+    b.rect(x - 1, y + 5, 15, 2, '#2c3470');
+    dressTorso(dc, '#4a58b4', 0.62);
+    for (let xx = box.x; xx < box.x + box.w; xx++) dressAt(dc, xx, box.y + 4, '#e6c65c');
+  } else if (costume === 'knight') {
+    // Cavaleiro: elmo de aço com penacho vermelho, protetor de nariz, peitoral de placas e cinto.
+    b.rect(x + 2, y - 2, 8, 1, '#c3cddb');
+    b.rect(x + 1, y - 1, 12, 4, '#9fabbd');
+    b.rect(x + 7, y - 3, 2, 2, '#c9503f');
+    b.rect(x + 1, y + 3, 12, 2, '#7d899c');
+    b.rect(x + 1, y + 5, 2, 6, '#93a0b3');
+    b.rect(x + 11, y + 5, 2, 6, '#93a0b3');
+    b.vline(x + 7, y + 5, y + 9, '#b6c1cf');
+    dressTorso(dc, '#98a5b8', 0.6);
+    for (let xx = box.x; xx < box.x + box.w; xx++) dressAt(dc, xx, box.y + 3, '#8a6a3f');
+    dressAt(dc, box.x + 3, box.y + 1, '#d9dee8');
+    dressAt(dc, box.x + 4, box.y + 1, '#d9dee8');
+  } else if (costume === 'rogue') {
+    // Ladino: capuz escuro (rosto à mostra), manto escuro e alça de couro atravessada.
+    drawHood(dc, x, y, '#2f3543', '#3d4658');
+    dressTorso(dc, '#343b4c', 0.62);
+    for (let i = 0; i < 5; i++) dressAt(dc, box.x + i + 1, box.y + i, '#6b4a2f');
+  } else if (costume === 'cleric') {
+    // Clérigo: capuz claro com debrum dourado e cruz dourada no peito.
+    drawHood(dc, x, y, '#efe7d3', '#d9ba55');
+    dressTorso(dc, '#efe7d3', 0.66);
+    const cx = box.x + (box.w >> 1);
+    for (let i = 0; i < 3; i++) dressAt(dc, cx, box.y + 1 + i, '#d9ba55');
+    dressAt(dc, cx - 1, box.y + 2, '#d9ba55');
+    dressAt(dc, cx + 1, box.y + 2, '#d9ba55');
+  } else if (costume === 'smith') {
+    // Ferreiro: avental de couro com alças e martelo apoiado no ombro direito.
+    dressTorso(dc, '#7b4f2b', 0.62, [1, box.w - 2]);
+    for (let yy = box.y; yy < box.y + 2; yy++) {
+      dressAt(dc, box.x + 1, yy, '#5b3820');
+      dressAt(dc, box.x + box.w - 2, yy, '#5b3820');
+    }
+    b.rect(box.x + 9, box.y + 3, 4, 3, '#8d96a6'); // cabeça do martelo no quadril
+    b.set(box.x + 9, box.y + 3, '#b8c1cf');
+    b.vline(box.x + 10, box.y + 1, box.y + 2, '#6b4a2f'); // cabo
+  } else if (costume === 'scholar') {
+    // Estudioso: capuz de lã e pergaminho junto ao peito.
+    drawHood(dc, x, y, '#a5814f', '#c9a86e');
+    dressTorso(dc, '#8b6a41', 0.5);
+    b.rect(box.x + 1, box.y + 1, 3, 4, '#f3e7c8');
+    b.hline(box.x + 1, box.x + 3, box.y + 2, '#c9503f');
+    b.set(box.x + 2, box.y + 4, '#7a6a4a');
   } else {
-    // Gola da capa: rosto e crachá continuam visíveis.
+    // Vampiro: gola da capa (rosto e crachá continuam visíveis).
     b.rect(x, y + 12, 2, 5, '#702743');
     b.rect(x + 12, y + 12, 2, 5, '#702743');
   }

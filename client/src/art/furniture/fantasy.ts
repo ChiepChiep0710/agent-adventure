@@ -1212,6 +1212,663 @@ export function coffeeTable(seed: number): BufFurniture {
   return { base: s };
 }
 
+// ------------------------------------------------------------------ divisórias, copa e recepção
+
+/** Limpa o contorno lateral (1px de cada lado) para módulos que se emendam lado a lado. */
+function noSides(b: PixelBuf, w = 16): void {
+  for (let y = -b.oy; y < b.h - b.oy; y++) {
+    b.clear(-1, y);
+    b.clear(w, y);
+  }
+}
+
+/**
+ * Divisória de fantasia (lugar da divisória de vidro): cerca vazada de ripas de carvalho com vigas
+ * e plinto de pedra. 'h' = corre leste-oeste (vista de frente), 'v' = corre norte-sul (vista de
+ * cima, faixa fina) e 'end' = mourão de ponta. Sem vidro, então nada de brilho/reflexo.
+ */
+export function glassPartition(variant: string | undefined): BufFurniture {
+  const v = variant ?? 'h';
+  const s = floorSheet(1, 1, 22, 2);
+  const b = s.buf;
+  if (v === 'v') {
+    // Corre norte-sul: viga de madeira com travessas de ferro (a cerca vista de cima).
+    const cols = ['#42301e', '#6e4a2c', '#9a7449', '#7d5836', '#5f6673', '#7d5836', '#4c331f', '#2f2a24'];
+    cols.forEach((c, i) => b.vline(4 + i, -16, 15, c));
+    for (let y = -16; y < 16; y += 7) {
+      b.hline(4, 11, y, '#4a4038');
+      b.set(6, y, F.iron.lt);
+      b.set(9, y, F.iron.dk);
+    }
+    underRect(b, 12, -16, 2, 32, 'rgba(30,26,20,0.14)');
+    return { base: s };
+  }
+  if (v === 'end') {
+    // Ponta: mourão de carvalho sobre base de pedra, com capitel de ferro.
+    topFace(b, 4, 3, 8, 4, F.stone);
+    frontFace(b, 4, 7, 8, 9, F.stone);
+    b.hline(4, 11, 13, F.stone.dk);
+    b.rect(6, -18, 4, 22, F.oakDark.base);
+    b.vline(6, -18, 3, F.oakDark.lt);
+    b.vline(9, -18, 3, F.oakDark.dd);
+    b.rect(5, -20, 6, 3, F.iron.base);
+    b.hline(5, 10, -20, F.iron.lt);
+    b.set(8, -21, F.iron.lt);
+    b.outline();
+    contact(b, 3, 13, 10, 4, 0.2);
+    return { base: s };
+  }
+  // 'h': ripas verticais entre duas vigas, com plinto de pedra (o vão entre as ripas é vazado).
+  b.rect(0, -17, 16, 3, F.oakDark.base);
+  b.hline(0, 15, -17, F.oakDark.lt);
+  b.hline(0, 15, -15, F.oakDark.dd);
+  for (let x = 0; x < 16; x += 3) {
+    b.vline(x, -14, 5, F.oak.base);
+    b.vline(x + 1, -14, 5, F.oak.dk);
+    b.set(x, -14, F.oak.hi);
+  }
+  // Travessas horizontais que amarram as ripas.
+  for (const y of [-8, 1]) {
+    b.hline(0, 15, y, F.oakDark.base);
+    b.hline(0, 15, y + 1, F.oakDark.dk);
+  }
+  // Plinto de pedra e rodapé de madeira (mesma altura da meia-parede original).
+  topFace(b, 0, 6, 16, 3, F.stone);
+  frontFace(b, 0, 9, 16, 7, F.stone);
+  b.hline(0, 15, 14, F.stone.dk);
+  noSides(b);
+  contact(b, 0, 14, 16, 3, 0.16);
+  return { base: s };
+}
+
+/** Gabinete de tábuas com tampo de pedra (base da bancada e da bancada com bacia). */
+function stoneCounterBody(b: PixelBuf, kind: 'plain' | 'drawers' | 'doors'): void {
+  frontFace(b, 0, 5, 16, 11, F.oakDark);
+  b.vline(0, 5, 15, F.oakDark.lt);
+  b.vline(15, 5, 13, F.oakDark.dd);
+  b.rect(1, 14, 14, 2, '#33251a');
+  b.hline(1, 14, 14, '#241a12');
+  if (kind === 'drawers') {
+    for (const y of [8, 11]) {
+      b.hline(1, 14, y, F.oakDark.dd);
+      b.hline(1, 14, y + 1, F.oakDark.lt);
+    }
+    for (const y of [6, 9, 12]) b.rect(6, y, 4, 1, F.iron.base);
+  } else if (kind === 'doors') {
+    b.vline(7, 6, 13, F.oakDark.dd);
+    b.vline(8, 6, 13, F.oakDark.lt);
+    b.rect(5, 8, 1, 3, F.iron.base);
+    b.rect(10, 8, 1, 3, F.iron.base);
+  } else {
+    // Porta única com dobradiças em fita, como nas bancadas de taverna.
+    b.rect(12, 8, 1, 3, F.iron.base);
+    b.hline(1, 14, 6, F.oakDark.lt);
+    for (const x of [2, 4, 12, 14]) b.set(x, 9, F.iron.base);
+  }
+  // Tampo de pedra: laje única com arestas gastas.
+  topFace(b, 0, -3, 16, 7, F.stone);
+  b.hline(0, 15, 4, F.stone.dk);
+  b.hline(0, 15, 3, F.stone.hi);
+  for (const [x, y] of [[3, -1], [11, 1], [7, 0]] as const) b.set(x, y, F.stone.base);
+}
+
+export function counter(variant: string | undefined): BufFurniture {
+  const s = floorSheet(1, 1, 6);
+  stoneCounterBody(s.buf, variant === 'drawers' ? 'drawers' : 'plain');
+  s.buf.outline();
+  noSides(s.buf);
+  contact(s.buf, 0, 14, 16, 3, 0.2);
+  return { base: s };
+}
+
+/** Bancada de pedra com bacia d'água esculpida, caneca e colher de pau. */
+export function counterSink(): BufFurniture {
+  const s = floorSheet(1, 1, 10);
+  const b = s.buf;
+  stoneCounterBody(b, 'doors');
+  // Bacia escavada na pedra: borda clara, água funda e reflexo.
+  b.ellipse(8, 1, 5.6, 2.8, F.stone.dk);
+  b.ellipse(8, 1.2, 4.8, 2.1, '#3d6b74');
+  b.hline(5, 11, 0, '#6fa8b4');
+  b.set(6, 1, 'rgba(255,255,255,0.5)');
+  b.set(9, 2, 'rgba(127,224,208,0.5)');
+  // Colher de pau atravessada na bacia.
+  b.line(4, 0, 12, 1, F.oldWood.base);
+  b.rect(11, -1, 3, 2, F.oldWood.lt);
+  // Jarro de água (barro) na ponta da bancada.
+  b.rect(12, -7, 3, 4, '#b0603c');
+  b.hline(12, 14, -7, '#d07a4e');
+  b.set(12, -5, '#8a462a');
+  b.set(14, -6, '#8a462a');
+  b.set(13, -8, '#8a6636');
+  b.outline();
+  noSides(b);
+  contact(b, 0, 14, 16, 3, 0.2);
+  return { base: s };
+}
+
+// ------------------------------------------------------------------ banheiro, recepção e apoio
+
+/** Cadeira de taverna: assento de tábuas e espaldar entalhado, nos quatro sentidos. */
+export function cafeChair(variant: string | undefined): BufFurniture {
+  const v = variant ?? 'down';
+  const s = floorSheet(1, 1, 10);
+  const b = s.buf;
+  const leg = F.oakDark.dk;
+  for (const x of [4, 11]) b.vline(x, 9, 15, leg);
+  for (const x of [5, 10]) b.vline(x, 9, 13, F.oakDark.base);
+  const seat = () => {
+    b.rect(3, 5, 10, 4, F.oldWood.base);
+    b.hline(3, 12, 5, F.oldWood.hi);
+    b.hline(3, 12, 7, F.oldWood.dk);
+    b.hline(3, 12, 8, F.oakDark.dd);
+    b.set(7, 6, F.oldWood.dk);
+  };
+  const backPanel = (x: number, y: number, w: number, h: number) => {
+    b.rect(x, y, w, h, F.oak.base);
+    b.hline(x, x + w - 1, y, F.oak.hi);
+    b.vline(x, y, y + h - 1, F.oak.lt);
+    b.vline(x + w - 1, y, y + h - 1, F.oak.dk);
+    // Cravos de ferro nas pontas do espaldar.
+    b.set(x + 1, y + h - 2, F.iron.base);
+    b.set(x + w - 2, y + h - 2, F.iron.base);
+  };
+  if (v === 'down') {
+    for (const x of [4, 11]) b.vline(x, -3, 5, leg);
+    backPanel(3, -6, 10, 5);
+    seat();
+    b.outline();
+    contact(b, 2, 13, 12, 3, 0.2);
+    return { base: s };
+  }
+  if (v === 'up') {
+    seat();
+    b.outline();
+    const front = floorSheet(1, 1, 10);
+    const f = front.buf;
+    for (const x of [4, 11]) f.vline(x, 6, 10, leg);
+    f.rect(3, 3, 10, 5, F.oak.base);
+    f.hline(3, 12, 3, F.oak.hi);
+    f.hline(3, 12, 7, F.oakDark.dd);
+    f.vline(12, 3, 7, F.oak.dk);
+    f.outline();
+    return { base: s, front };
+  }
+  // left/right: espaldar lateral do lado oposto ao olhar.
+  seat();
+  const bx = v === 'left' ? 11 : 3;
+  b.vline(bx + 1, 0, 8, leg);
+  backPanel(bx, -6, 2, 12);
+  b.outline();
+  return { base: s };
+}
+
+/**
+ * Privada de madeira (lugar do box de banheiro): baias de tábuas, banco furado e lanterninha.
+ * Mesma semântica de estado do original: state 1 = porta fechada (ocupado); 0 = entreaberta.
+ */
+export function toiletStall(state: number): BufFurniture {
+  const occupied = state >= 1;
+  const panel = F.oakDark;
+  const s = floorSheet(2, 2, 26, 3, 4);
+  const b = s.buf;
+  // Interior em penumbra: parede de tábuas ao fundo e banco de privada.
+  b.rect(4, -8, 24, 9, '#33251a');
+  b.rect(11, -7, 10, 6, '#4a3524');
+  b.hline(11, 20, -7, '#5d4430');
+  b.hline(11, 20, -2, '#2b1e15');
+  b.ellipse(16, 3, 5.5, 4, '#4a3524');
+  b.ellipse(16, 2.5, 5, 3.6, F.oldWood.base);
+  b.ellipse(16, 3, 2.6, 2, '#1e1610');
+  b.hline(12, 20, 1, F.oldWood.lt);
+  // Lanterna de ferro na divisória esquerda (luz quente no interior).
+  b.rect(3, 2, 3, 3, F.ironDark.base);
+  b.set(4, 2, F.flame);
+  b.set(4, 1, 'rgba(255,182,72,0.6)');
+  b.set(3, 1, 'rgba(255,182,72,0.35)');
+  // Divisórias laterais de tábuas com cintas de ferro.
+  for (const x of [0, 29]) {
+    b.rect(x, -22, 3, 34, panel.base);
+    b.vline(x, -22, 11, panel.lt);
+    b.vline(x + 2, -22, 11, panel.dd);
+    b.hline(x, x + 2, -22, F.iron.base);
+    for (let y = -16; y < 12; y += 6) b.hline(x, x + 2, y, F.ironDark.base);
+  }
+  b.outline();
+  underRect(b, 2, 0, 28, 12, 'rgba(30,26,20,0.16)');
+  // Frente: porta de tábuas (cobre o interior).
+  const front = floorSheet(2, 2, 26, 3, 4);
+  const f = front.buf;
+  f.rect(0, 10, 32, 20, panel.base);
+  f.rect(0, 9, 32, 2, F.oakDark.lt);
+  f.hline(0, 31, 9, F.oakDark.hi);
+  f.vline(0, 11, 29, panel.lt);
+  f.vline(31, 11, 29, panel.dd);
+  f.hline(0, 31, 29, panel.dd);
+  for (const x of [1, 30]) f.rect(x, 30, 1, 2, '#3a2a1e');
+  if (occupied) {
+    // Fechada: tábuas verticais, fecho de ferro e corda vermelha de "trancado".
+    for (let x = 8; x < 25; x += 4) f.vline(x, 12, 28, F.oakDark.dd);
+    f.hline(7, 24, 12, F.oak.dk);
+    f.vline(7, 12, 28, F.oak.dk);
+    f.vline(24, 12, 28, F.oakDark.dd);
+    f.rect(20, 18, 3, 3, F.iron.base);
+    f.set(21, 19, '#2b1e15');
+    f.hline(14, 19, 21, F.blood);
+    f.set(13, 20, F.blood);
+  } else {
+    // Entreaberta: vão escuro à direita e folha estreita em perspectiva.
+    f.rect(19, 12, 6, 17, '#2b1e15');
+    f.rect(20, 13, 4, 15, '#5d4430');
+    f.rect(7, 12, 12, 17, F.oak.base);
+    f.hline(7, 18, 12, F.oak.hi);
+    f.vline(7, 12, 28, F.oak.dk);
+    f.vline(18, 12, 28, F.oakDark.dd);
+    for (let x = 9; x < 18; x += 3) f.vline(x, 13, 27, F.oak.dk);
+    f.rect(16, 18, 2, 3, F.iron.base);
+    f.set(21, 19, F.poison);
+  }
+  f.outline();
+  return { base: s, front };
+}
+
+/** Pia de pedra: pé de alvenaria, bacia funda com água e jarro de barro. */
+export function sink(): BufFurniture {
+  const s = floorSheet(1, 1, 10);
+  const b = s.buf;
+  // Pé de alvenaria (blocos com junta).
+  frontFace(b, 2, 6, 12, 10, F.stone);
+  b.vline(2, 6, 14, F.stone.hi);
+  b.vline(13, 6, 14, F.stone.dk);
+  for (const y of [9, 12]) b.hline(2, 13, y, F.stone.dk);
+  b.rect(6, 8, 4, 2, F.stone.base);
+  // Cuba larga de pedra escavada.
+  b.rect(0, -3, 16, 7, F.stone.base);
+  b.hline(0, 15, -3, F.stone.hi);
+  b.hline(0, 15, 3, F.stone.dk);
+  b.hline(0, 15, 4, F.stone.dd);
+  b.ellipse(8, 0.5, 5.4, 2.6, F.stone.dk);
+  b.ellipse(8, 0.9, 4.4, 1.9, '#3d6b74');
+  b.hline(5, 10, 0, '#6fa8b4');
+  b.set(7, 1, 'rgba(255,255,255,0.45)');
+  // Jarro de barro e pano dobrado na borda.
+  b.rect(11, -7, 3, 4, '#b0603c');
+  b.hline(11, 13, -7, '#d07a4e');
+  b.set(11, -5, '#8a462a');
+  b.set(13, -6, '#8a462a');
+  b.rect(2, -4, 4, 2, '#d8cdb4');
+  b.hline(2, 5, -4, '#efe6d2');
+  b.outline();
+  contact(b, 0, 14, 16, 3, 0.2);
+  return { base: s };
+}
+
+/** Balcão do estalajadeiro: tábuas com cintas, livro-razão, sino e castiçal. */
+export function receptionDesk(seed: number): BufFurniture {
+  const s = floorSheet(3, 1, 16);
+  const b = s.buf;
+  // Área de trabalho atrás: tábua com livro-razão aberto, castiçal e sino.
+  topFace(b, 1, -10, 46, 6, F.oldWood);
+  b.hline(1, 46, -10, F.oldWood.hi);
+  woodGrain(b, 2, -9, 44, 4, F.oldWood, seed);
+  // Livro-razão de couro com páginas de pergaminho.
+  b.rect(7, -15, 17, 6, F.leather);
+  b.hline(7, 23, -15, shade(F.leather, 0.22));
+  b.rect(8, -14, 7, 4, F.parch);
+  b.rect(16, -14, 7, 4, F.parchDark);
+  b.vline(15, -14, -10, '#3a2a1e');
+  b.hline(9, 13, -13, 'rgba(120,100,70,0.45)');
+  b.hline(17, 21, -13, 'rgba(120,100,70,0.45)');
+  b.set(22, -11, F.blood);
+  // Castiçal de ferro com vela acesa.
+  b.rect(30, -14, 2, 5, F.iron.base);
+  b.hline(29, 32, -9, F.ironDark.dk);
+  candle(b, 29, -14, 6, 3);
+  // Sino de latão no canto.
+  b.rect(38, -14, 5, 3, F.gold);
+  b.hline(38, 42, -14, '#f6e7b0');
+  b.hline(39, 41, -15, '#f6e7b0');
+  b.set(40, -16, F.gold);
+  b.set(39, -11, shade(F.gold, -0.35));
+  // Balcão frontal: tábuas verticais com cintas de ferro e entalhe dourado.
+  frontFace(b, 0, -2, 48, 18, F.oak);
+  woodGrain(b, 1, -1, 46, 14, F.oak, seed, true);
+  b.rect(0, 5, 48, 3, F.oakDark.base);
+  b.hline(0, 47, 5, F.oakDark.lt);
+  b.hline(0, 47, 7, F.oakDark.dd);
+  for (let x = 4; x < 44; x += 8) {
+    b.set(x, 11, F.gold);
+    b.hline(x + 1, x + 3, 10, 'rgba(224,179,76,0.7)');
+    b.set(x + 2, 12, 'rgba(224,179,76,0.45)');
+  }
+  b.rect(0, 14, 48, 2, F.oakDark.dd);
+  // Tampo de pedra do balcão.
+  topFace(b, -1, -6, 50, 5, F.stone);
+  b.hline(-1, 48, -2, F.stone.dk);
+  // Sino de atendimento, livro de registro e pena sobre o tampo.
+  b.rect(28, -7, 5, 2, F.gold);
+  b.set(29, -8, '#f6e7b0');
+  b.set(30, -8, '#f6e7b0');
+  scroll(b, 4, -5, 8, 3);
+  b.line(15, -4, 19, -6, '#f2ecdc');
+  b.set(20, -6, '#d8cfb8');
+  b.outline();
+  contact(b, -1, 13, 50, 4, 0.24);
+  return { base: s };
+}
+
+/** Banco rústico de meio-tronco com cavaletes de madeira. */
+export function bench(): BufFurniture {
+  const s = floorSheet(2, 1, 10);
+  const b = s.buf;
+  // Mourões do encosto e cavaletes.
+  for (const x of [2, 29]) {
+    b.rect(x, -6, 2, 21, F.oakDark.base);
+    b.vline(x, -6, 14, F.oakDark.lt);
+    b.vline(x + 1, -6, 14, F.oakDark.dd);
+  }
+  // Travessa do encosto: meio-tronco lascado.
+  b.rect(1, -6, 30, 3, F.oldWood.base);
+  b.hline(1, 30, -6, F.oldWood.hi);
+  b.hline(1, 30, -4, F.oldWood.dk);
+  for (const x of [3, 12, 21, 28]) b.set(x, -5, F.oldWood.dk);
+  // Assento: tábua grossa de tronco aplainado.
+  b.rect(0, 2, 32, 4, F.oldWood.base);
+  b.hline(0, 31, 2, F.oldWood.hi);
+  b.hline(0, 31, 5, F.oldWood.dk);
+  b.hline(0, 31, 6, F.oakDark.dd);
+  b.set(9, 4, F.oldWood.dk);
+  b.set(20, 3, F.oldWood.dk);
+  // Casca nas pontas e pés.
+  b.vline(0, 2, 5, '#4a3524');
+  b.vline(31, 2, 5, '#3a2a1c');
+  b.hline(2, 30, 13, F.oakDark.dk);
+  b.outline();
+  contact(b, 0, 13, 32, 3, 0.22);
+  return { base: s };
+}
+
+// ------------------------------------------------------------------ parede (fantasia)
+
+/** Espelho com moldura de ouro trabalhada (lugar do espelho de parede). */
+export function mirror(): BufFurniture {
+  const s = wallSheet(1);
+  const b = s.buf;
+  const x = 2;
+  const y = -28;
+  const w = 13;
+  const h = 15;
+  // Moldura de ouro: bisel claro em cima/esquerda, escuro embaixo/direita.
+  b.rect(x, y, w, h, F.gold);
+  b.hline(x, x + w - 1, y, '#f8ebbc');
+  b.vline(x, y, y + h - 1, '#f1d68a');
+  b.vline(x + w - 1, y, y + h - 1, shade(F.gold, -0.32));
+  b.hline(x, x + w - 1, y + h - 1, shade(F.gold, -0.32));
+  b.hline(x + 1, x + w - 2, y + 1, shade(F.gold, -0.14));
+  // Volutas nos quatro cantos (pedraria e arabesco).
+  for (const [cx, cy] of [[x + 1, y + 1], [x + w - 3, y + 1], [x + 1, y + h - 4], [x + w - 3, y + h - 4]] as const) {
+    b.rect(cx, cy, 2, 2, '#fff3c0');
+    b.set(cx, cy + 1, shade(F.gold, -0.2));
+  }
+  b.set(x + (w >> 1), y, '#fff3c0');
+  b.set(x + (w >> 1), y + h - 1, shade(F.gold, -0.4));
+  // Vidro: região que o render recorta para o reflexo de quem está na frente.
+  b.rect(x + 2, y + 2, w - 4, h - 4, '#8fa8b8');
+  b.hline(x + 2, x + w - 3, y + 2, '#b9cbd6');
+  b.hline(x + 2, x + w - 3, y + 3, '#a2b8c6');
+  b.line(x + w - 5, y + 3, x + 5, y + h - 5, 'rgba(255,255,255,0.55)');
+  b.set(x + w - 4, y + h - 4, '#6f8a9c');
+  b.outline();
+  s.rects = { glass: rectAt(s, x + 2, y + 2, w - 4, h - 4) };
+  return { base: s };
+}
+
+/** Prateleira de parede com potes de conserva, poções, ervas e vela. */
+export function shelfWall(seed: number): BufFurniture {
+  const s = wallSheet(2);
+  const b = s.buf;
+  const r = rngOf(seed, 51);
+  const w = F.oak;
+  const plank = (y: number) => {
+    b.rect(1, y, 30, 2, w.base);
+    b.hline(1, 30, y, w.lt);
+    b.hline(1, 30, y + 1, w.dk);
+    for (const x of [4, 26]) {
+      b.rect(x, y + 2, 2, 2, F.ironDark.base);
+      b.set(x, y + 2, F.iron.base);
+    }
+  };
+  plank(-19);
+  plank(-9);
+  // Prateleira de cima: potes de conserva e um tomo apoiado.
+  let x = 3;
+  for (let i = 0; i < 4 && x < 26; i++) {
+    const hh = 5 + Math.floor(r() * 3);
+    potion(b, x, -20, pick(r, [F.poison, '#6f8fe0', '#e0a03c', '#c96ad0']), hh);
+    b.hline(x, x + 2, -20 - hh + 3, 'rgba(255,255,255,0.35)');
+    x += 5;
+  }
+  b.rect(x, -25, 2, 5, pick(r, ['#6b3a3a', '#3f4f6a', '#4a5f3a']));
+  b.hline(x, x + 1, -22, F.gold);
+  // Ervas secas penduradas na ponta direita.
+  for (const [dx, c] of [[0, '#6f8f4a'], [2, '#4a6a3a']] as const) {
+    b.line(27 + dx, -19, 26 + dx, -26, c);
+    b.set(26 + dx, -26, '#8aa85a');
+    b.set(25 + dx, -24, '#7a9a4a');
+  }
+  // Prateleira de baixo: jarros de barro, rolos e caveira (varia com a seed).
+  const v = seed % 3;
+  if (v === 0) {
+    b.rect(3, -14, 6, 5, '#b0603c');
+    b.hline(3, 8, -14, '#d07a4e');
+    b.rect(4, -11, 4, 1, '#8a462a');
+    b.rect(10, -13, 3, 4, '#c99a5e');
+    b.set(11, -14, '#8a6636');
+    scroll(b, 15, -12, 7, 3);
+    candle(b, 25, -10, 5, 2);
+  } else if (v === 1) {
+    for (let i = 0; i < 4; i++) {
+      const c = pick(r, ['#6b3a3a', '#4a5f3a', '#5a4232', '#3f4f6a']);
+      b.rect(4 + i * 3, -17, 2, 8, c);
+      b.vline(4 + i * 3, -17, -10, shade(c, 0.14));
+      b.hline(4 + i * 3, 5 + i * 3, -15, F.gold);
+    }
+    b.rect(17, -13, 4, 4, '#ded7c4');
+    skull(b, 17, -17);
+    b.rect(23, -14, 5, 5, '#4a3524');
+    b.hline(23, 27, -14, '#5d4430');
+    b.set(25, -12, F.gold);
+  } else {
+    potion(b, 3, -10, F.poison, 6);
+    potion(b, 7, -10, '#6f8fe0', 5);
+    scroll(b, 12, -12, 6, 3);
+    b.rect(20, -15, 6, 6, '#b0603c');
+    b.hline(20, 25, -15, '#d07a4e');
+    b.hline(20, 25, -10, '#8a462a');
+    b.set(22, -13, '#7a3e26');
+    candle(b, 27, -10, 4, 2);
+  }
+  b.outline();
+  return { base: s };
+}
+
+/** Tabuleta pendurada em cantoneiras de ferro (o render escreve o nome da sala no pergaminho). */
+export function sign(): BufFurniture {
+  const s = wallSheet(3);
+  const b = s.buf;
+  const x = 3;
+  const y = -27;
+  const w = 42;
+  const h = 12;
+  // Cantoneiras e argolas de ferro que seguram a tabuleta na parede.
+  for (const cx of [x + 2, x + w - 5]) {
+    b.rect(cx, y - 4, 3, 5, F.ironDark.base);
+    b.hline(cx, cx + 2, y - 4, F.iron.base);
+    b.vline(cx + 1, y - 3, y - 1, F.iron.lt);
+  }
+  // Tábua de carvalho emoldurada.
+  b.rect(x, y, w, h, F.oakDark.base);
+  b.hline(x, x + w - 1, y, F.oakDark.lt);
+  b.vline(x, y, y + h - 1, F.oakDark.lt);
+  b.vline(x + w - 1, y, y + h - 1, F.oakDark.dd);
+  b.hline(x, x + w - 1, y + h - 1, F.oakDark.dd);
+  // Pergaminho onde o render desenha o nome.
+  b.rect(x + 2, y + 2, w - 4, h - 4, F.parch);
+  b.hline(x + 2, x + w - 3, y + 2, '#f4e9c9');
+  b.hline(x + 2, x + w - 3, y + h - 3, F.parchDark);
+  // Cantoneiras, tachas e vinheta de canto em ferro.
+  for (const [dx, dy, sx, sy] of [[0, 0, 1, 1], [w - 4, 0, -1, 1], [0, h - 4, 1, -1], [w - 4, h - 4, -1, -1]] as const) {
+    b.rect(x + dx, y + dy, 4, 1, F.iron.base);
+    b.rect(x + dx, y + dy, 1, 4, F.iron.base);
+    b.set(x + dx + sx, y + dy + 2 * sy, F.iron.lt);
+  }
+  b.outline();
+  s.rects = { sign: rectAt(s, x + 3, y + 3, w - 6, h - 6) };
+  return { base: s };
+}
+
+/** Vão de porta em arco de pedra (lugar do batente de escritório). */
+export function doorFrame(): BufFurniture {
+  const s = wallSheet(2, 3);
+  const b = s.buf;
+  const st = F.stone;
+  const cx = 16;
+  const spring = -27;
+  const top = -30;
+  // Batentes de pedra (lados), com junta e bisel.
+  b.rect(-2, spring, 3, 27, st.base);
+  b.vline(-2, spring, -1, st.hi);
+  b.vline(0, spring + 1, -1, st.dk);
+  b.rect(31, spring, 3, 27, st.base);
+  b.vline(31, spring + 1, -1, st.dk);
+  b.vline(33, spring, -1, st.dd);
+  for (let y = spring + 4; y < 0; y += 5) {
+    b.hline(-2, 0, y, st.dk);
+    b.hline(31, 33, y, st.dk);
+  }
+  // Arco pleno: pedra acima das aduelas, mais alta no fecho.
+  for (let x = 1; x < 31; x++) {
+    const dx = (x - cx) / 15;
+    const rise = Math.round(3 * Math.sqrt(Math.max(0, 1 - dx * dx)));
+    const archY = spring - rise;
+    const hgt = archY - top;
+    if (hgt > 0) b.rect(x, top, 1, hgt, st.base);
+    // Aresta iluminada da aduela (o intradorso do arco).
+    b.set(x, archY, st.hi);
+    b.set(x, archY + 1, st.lt);
+  }
+  // Juntas das aduelas e fecho (chave) no meio.
+  for (let x = 3; x < 31; x += 4) {
+    for (let y = top; y < spring; y++) if (b.alpha(x, y) > 0) b.set(x, y, st.dk);
+  }
+  b.rect(14, top, 4, 3, st.lt);
+  b.hline(14, 17, top, st.hi);
+  b.hline(14, 17, top + 2, st.dk);
+  // Soleira de pedra.
+  b.rect(-2, -2, 36, 2, st.lt);
+  b.hline(-2, 33, -2, st.hi);
+  b.hline(-2, 33, -1, st.dk);
+  b.outline();
+  return { base: s };
+}
+
+/** Archote de parede no lugar do interruptor: aceso (on) ou apagado (off). */
+export function lightSwitch(variant: string | undefined): BufFurniture {
+  const s = wallSheet(1);
+  const b = s.buf;
+  const on = (variant ?? 'on') === 'on';
+  // Chapa de ferro na parede, com braço curto (mesma pegada do interruptor original).
+  b.rect(6, -16, 3, 3, F.ironDark.base);
+  b.vline(6, -16, -14, F.iron.base);
+  b.hline(6, 8, -14, F.iron.dk);
+  b.set(7, -15, F.iron.lt);
+  b.hline(6, 9, -17, F.iron.base);
+  b.set(9, -18, F.iron.base);
+  // Tocha de madeira com aro de ferro.
+  b.rect(9, -20, 2, 3, F.oldWood.base);
+  b.hline(9, 10, -20, F.oldWood.lt);
+  b.hline(9, 10, -18, F.iron.base);
+  if (on) {
+    // Chama curta e halo quente.
+    b.set(10, -21, F.flameHot);
+    b.set(9, -21, 'rgba(255,182,72,0.5)');
+    b.set(10, -20, F.flame);
+  } else {
+    // Apagada: brasa morta na ponta.
+    b.set(10, -21, '#6b4a32');
+    b.set(9, -21, '#4a3524');
+  }
+  b.outline();
+  return { base: s };
+}
+
+/**
+ * Elevador de fantasia: portal de pedra com grade de ferro (portão levadiço). A grade sobe 3px
+ * por estado (0 fechado .. 4 aberto), como as folhas deslizantes do original, e a runa do painel
+ * acende quando há cabine andando.
+ */
+export function elevator(state: number): BufFurniture {
+  const s = wallSheet(2, 2);
+  const b = s.buf;
+  const st = Math.max(0, Math.min(4, Math.round(state)));
+  const stn = F.stone;
+  // Moldura de pedra lavrada.
+  b.rect(0, -28, 32, 28, stn.base);
+  b.hline(0, 31, -28, stn.hi);
+  b.vline(0, -28, -1, stn.lt);
+  b.vline(31, -28, -1, stn.dk);
+  b.rect(1, -27, 2, 27, stn.lt);
+  b.rect(29, -27, 2, 27, stn.dd);
+  // Painel de runas no alto: a runa acende (msm. leitura do indicador original).
+  b.rect(10, -27, 12, 3, '#2b2622');
+  const lit = st > 0;
+  b.set(13, -26, lit ? F.magic : '#2e4a44');
+  b.set(12, -25, lit ? F.magic : '#2e4a44');
+  b.set(14, -25, lit ? F.magic : '#2e4a44');
+  b.rect(16, -26, 4, 1, lit ? F.gold : '#3a3428');
+  // Vão interno: poço de pedra com tocha e piso de lajes.
+  const ix = 3;
+  const iy = -23;
+  const iw = 26;
+  const ih = 23;
+  b.rect(ix, iy, iw, ih, '#3a3228');
+  b.rect(ix, iy, iw, 2, '#4a4034');
+  b.rect(ix + 2, iy + 2, iw - 4, ih - 7, '#2b2622');
+  // Piso de lajes e tocha quente na parede do fundo.
+  b.rect(ix, iy + ih - 4, iw, 4, '#5a5248');
+  b.hline(ix, ix + iw - 1, iy + ih - 4, '#6b6358');
+  b.set(ix + 6, iy + ih - 5, 'rgba(255,182,72,0.35)');
+  b.set(ix + 19, iy + ih - 5, 'rgba(255,182,72,0.28)');
+  b.rect(ix + iw - 6, iy + 8, 1, 5, F.iron.base);
+  b.set(ix + iw - 6, iy + 7, F.flame);
+  b.set(ix + iw - 7, iy + 6, 'rgba(255,182,72,0.45)');
+  // Grade levadiça: sobe `open` px por estado, presa nas correntes.
+  const open = st * 3;
+  const gh = ih - open;
+  if (gh > 0) {
+    for (let x = ix + 2; x < ix + iw - 2; x += 4) {
+      b.vline(x, iy, iy + gh - 1, F.ironDark.base);
+      b.vline(x + 1, iy, iy + gh - 1, F.iron.dk);
+      b.set(x, iy + gh - 1, '#20242c');
+    }
+    for (const y of [iy + 2, iy + gh - 3]) {
+      if (y < iy + gh) {
+        b.hline(ix, ix + iw - 1, y, F.iron.base);
+        b.hline(ix, ix + iw - 1, y + 1, F.ironDark.dd);
+      }
+    }
+    b.hline(ix, ix + iw - 1, iy + gh - 1, '#20242c');
+  }
+  // Correntes e roldanas no alto do vão.
+  for (const x of [ix + 1, ix + iw - 2]) {
+    b.vline(x, iy, iy + 2, F.iron.base);
+    b.set(x, iy, '#20242c');
+  }
+  b.rect(ix + 1, iy + 3, iw - 2, 1, 'rgba(30,26,20,0.5)');
+  b.outline();
+  return { base: s };
+}
+
 // ------------------------------------------------------------------ despacho
 
 /** Móvel de fantasia do kind, ou undefined quando o kind não tem versão de fantasia. */
@@ -1281,6 +1938,34 @@ export function fantasyBuild(kind: FurnitureKind, variant: string | undefined, s
       return cafeTable();
     case 'coffee_table':
       return coffeeTable(seed);
+    case 'glass_partition':
+      return glassPartition(variant);
+    case 'counter':
+      return counter(variant);
+    case 'counter_sink':
+      return counterSink();
+    case 'cafe_chair':
+      return cafeChair(variant);
+    case 'toilet_stall':
+      return toiletStall(state);
+    case 'sink':
+      return sink();
+    case 'reception_desk':
+      return receptionDesk(seed);
+    case 'bench':
+      return bench();
+    case 'mirror':
+      return mirror();
+    case 'shelf_wall':
+      return shelfWall(seed);
+    case 'sign':
+      return sign();
+    case 'door_frame':
+      return doorFrame();
+    case 'light_switch':
+      return lightSwitch(variant);
+    case 'elevator':
+      return elevator(state);
     default:
       return undefined;
   }

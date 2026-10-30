@@ -18,6 +18,11 @@ do meio (0.**3**.0).
   de escriba com tomo aberto, vela e pena no lugar do monitor, cadeiras de espaldar alto, estantes com rolos, poções e
   caveiras, baú, caldeirão borbulhando, barril, archotes, candelabro, mesa de guerra com mapa, quadro de missões,
   tapeçarias e estandartes, espelho mágico, barril de cerveja, estante de poções e forno de pedra.
+  Também a recepção (balcão de estalajadeiro), copa e banheiros (pedra e madeira), divisórias de treliça, portal de
+  pedra no lugar do elevador e, do lado de fora, lanternas de ferro, barracas de feira e carroças, sem pintura na rua.
+  Os personagens ganham **classes de RPG** pela atividade (editar = mago, comando/teste = ferreiro, ler/buscar =
+  estudioso, web = batedor, esperando você = cavaleiro de guarda; parado, a classe fixa do agente), os balões viram
+  pergaminho, e quem precisa de você ganha o **"!" dourado de missão** (entregue: "✓" dourado).
 - **Nomes escolhidos para os agentes do Hermes** (`hermes-names.json`). Dois campos opcionais na pasta de dados do
   Habblaud: **`pool`** (estoque de nomes: cada agente novo, principal ou subagente, recebe um nome sorteado entre os
   ainda livres; esgotado, volta ao sorteio) e **`names`** (nome fixo por session id, que ganha do estoque). O arquivo é relido

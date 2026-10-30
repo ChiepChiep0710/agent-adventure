@@ -21,7 +21,9 @@ import { Lighting } from './lighting';
 import { Particles } from './particles';
 import { carSprite, propSprite, shadowSprite } from './props';
 import { countBadge, fallbackIcon } from './shell-sprites';
-import { decorateElevator, drawSeasonalLights, drawSeasonalWindow, seasonalCostume, seasonalFurniture } from './seasonal';
+import { characterCostume } from './fantasy-class';
+import { shouldDrawRoadMarkings } from './skin-props';
+import { decorateElevator, drawSeasonalLights, drawSeasonalWindow, seasonalFurniture } from './seasonal';
 import { buildAreaVis, furnitureSprites, opaqueBounds, paintShell, toWallVis, WALL_MARGIN, wallItemOrigin, wallSprites, type AreaVis, type FurnVis, type WallVis } from './scene';
 
 const enum K {
@@ -186,10 +188,12 @@ export class Renderer {
     ctx.imageSmoothingEnabled = false;
     ctx.translate(-this.baseX, -this.baseY);
     paintShell(this.art, ctx, this.exterior.floors, []);
-    // faixas da rua
-    const ly = this.exterior.streetY + Math.round(this.exterior.streetH / 2) - 1;
-    ctx.fillStyle = 'rgba(255,236,170,0.75)';
-    for (let x = this.baseX + 4; x < this.baseX + c.width; x += 24) ctx.fillRect(x, ly, 12, 2);
+    // faixas da rua (a estrada de pedra da skin de fantasia não tem pintura)
+    if (shouldDrawRoadMarkings()) {
+      const ly = this.exterior.streetY + Math.round(this.exterior.streetH / 2) - 1;
+      ctx.fillStyle = 'rgba(255,236,170,0.75)';
+      for (let x = this.baseX + 4; x < this.baseX + c.width; x += 24) ctx.fillRect(x, ly, 12, 2);
+    }
     this.shells = [];
     this.shellWindows = [];
     for (let col = CORE_COLS; col < cols; col++) {
@@ -843,7 +847,8 @@ export class Renderer {
     req.pose = ch.pose;
     req.held = ch.held;
     req.seated = ch.seated;
-    req.costume = seasonalCostume(this.theme, ch.info.seed);
+    // Skin de fantasia: a classe de RPG (por atividade) vence o acessório sazonal; no escritório, o sazonal.
+    req.costume = characterCostume(ch.info, this.theme);
     try {
       sprite = this.charSprite(req, ch.animT);
     } catch {
@@ -1046,7 +1051,7 @@ export class Renderer {
       req.pose = ch.pose === 'groom' ? 'groom' : 'stand';
       req.held = ch.pose === 'groom' ? ch.held : 'none';
       req.seated = false;
-      req.costume = seasonalCostume(this.theme, ch.info.seed);
+      req.costume = characterCostume(ch.info, this.theme);
       let s: Sprite;
       try {
         s = this.charSprite(req, ch.animT);

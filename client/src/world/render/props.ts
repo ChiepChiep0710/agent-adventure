@@ -2,7 +2,9 @@
 // visuais do mundo (sombra, brilhos). Mesma direção de arte do módulo de arte: contorno
 // cinza-azulado escuro, 3–4 tons por material, luz vinda de cima/esquerda.
 import { mulberry32 } from '../../../../shared/hash';
+import { isFantasy } from '../../art/skin';
 import type { ExteriorProp } from '../layout/types';
+import { carCacheKey, propCacheKey, propHasFantasyArt } from './skin-props';
 
 export interface PropSprite {
   canvas: HTMLCanvasElement;
@@ -321,10 +323,224 @@ function totemSprite(): PropSprite {
   return { canvas: c, ax: 7, ay: 32 };
 }
 
+// ------------------------------------------------------------------ variações da skin de fantasia
+// Só desenhadas quando `isFantasy()` está ativo (ver skin-props.ts): mesmas medidas e âncoras dos
+// sprites de escritório, para o exterior continuar com a mesma ocupação e profundidade.
+
+/** Lanterna de ferro forjado no lugar do poste de luz, com chama quente dentro do vidro. */
+function lanternSprite(): PropSprite {
+  const [c, ctx] = makeCanvas(10, 36);
+  shadowEllipse(ctx, 5, 34, 4, 1, 0.25);
+  // Poste e braço de ferro.
+  ctx.fillStyle = '#2b2f36';
+  ctx.fillRect(4, 8, 2, 26);
+  ctx.fillStyle = '#4a5260';
+  ctx.fillRect(4, 8, 1, 26);
+  ctx.fillStyle = '#2b2f36';
+  ctx.fillRect(2, 4, 6, 1);
+  ctx.fillRect(2, 3, 1, 2);
+  // Caixa da lanterna: aro escuro e vidro aceso.
+  ctx.fillStyle = '#2b2f36';
+  ctx.fillRect(1, 5, 8, 6);
+  ctx.fillStyle = '#ffb648';
+  ctx.fillRect(2, 6, 6, 3);
+  ctx.fillStyle = '#fff3c0';
+  ctx.fillRect(3, 6, 3, 2);
+  ctx.fillStyle = '#5f6673';
+  ctx.fillRect(2, 9, 6, 1);
+  // Halo quente em volta do vidro.
+  ctx.fillStyle = 'rgba(255,182,72,0.22)';
+  ctx.fillRect(0, 1, 10, 12);
+  // Base de ferro.
+  ctx.fillStyle = '#2b2f36';
+  ctx.fillRect(3, 32, 4, 2);
+  return { canvas: c, ax: 5, ay: 34 };
+}
+
+/** Banco de tronco (meio-tronco aplainado sobre cavaletes) no lugar do banco de ripas. */
+function logBenchSprite(): PropSprite {
+  const [c, ctx] = makeCanvas(26, 14);
+  shadowEllipse(ctx, 13, 12, 11, 2, 0.22);
+  // Cavaletes.
+  ctx.fillStyle = '#3a2a1c';
+  ctx.fillRect(3, 8, 2, 4);
+  ctx.fillRect(21, 8, 2, 4);
+  // Encosto baixo de tronco.
+  ctx.fillStyle = '#6b4a2e';
+  ctx.fillRect(1, 1, 24, 2);
+  ctx.fillStyle = '#8a6243';
+  ctx.fillRect(1, 1, 24, 1);
+  ctx.fillStyle = '#4a3222';
+  ctx.fillRect(1, 3, 24, 1);
+  // Assento de meio-tronco: topo claro, casca embaixo.
+  ctx.fillStyle = '#7a5232';
+  ctx.fillRect(1, 5, 24, 3);
+  ctx.fillStyle = '#a0703f';
+  ctx.fillRect(1, 5, 24, 1);
+  ctx.fillStyle = '#4a3222';
+  ctx.fillRect(1, 8, 24, 1);
+  // Nós da madeira.
+  ctx.fillStyle = '#4a3222';
+  ctx.fillRect(7, 6, 1, 1);
+  ctx.fillRect(17, 6, 1, 1);
+  return { canvas: c, ax: 13, ay: 12 };
+}
+
+/** Barraca de feira com toldo de lona listrado no lugar da mesa de guarda-sol. */
+function stallSprite(seed: number): PropSprite {
+  const [c, ctx] = makeCanvas(32, 34);
+  const palettes: [string, string, string][] = [
+    ['#a8352f', '#e7d7ae', '#5a3d26'],
+    ['#3f5a7a', '#e7d7ae', '#3a2a1c'],
+    ['#8a5a2e', '#efe4cd', '#4c331f'],
+  ];
+  const [a, b, dk] = palettes[seed % palettes.length];
+  // Sombra do toldo no chão.
+  shadowEllipse(ctx, 16, 29, 13, 3, 0.24);
+  // Banquetas laterais de fardo.
+  ctx.fillStyle = '#5b3c25';
+  ctx.fillRect(2, 24, 6, 5);
+  ctx.fillRect(24, 24, 6, 5);
+  ctx.fillStyle = '#a0703f';
+  ctx.fillRect(2, 24, 6, 2);
+  ctx.fillRect(24, 24, 6, 2);
+  // Bancada central de tábuas.
+  ctx.fillStyle = '#4a3222';
+  ctx.fillRect(8, 23, 16, 6);
+  ctx.fillStyle = '#7a5232';
+  ctx.fillRect(9, 24, 14, 4);
+  ctx.fillStyle = '#a0703f';
+  ctx.fillRect(9, 24, 14, 1);
+  for (let x = 11; x < 23; x += 4) {
+    ctx.fillStyle = '#5b3c25';
+    ctx.fillRect(x, 25, 1, 3);
+  }
+  // Frutas e pães na bancada.
+  ctx.fillStyle = '#e8574a';
+  ctx.fillRect(10, 21, 2, 2);
+  ctx.fillStyle = '#f2b33d';
+  ctx.fillRect(14, 21, 2, 2);
+  ctx.fillStyle = '#4cae6a';
+  ctx.fillRect(18, 21, 2, 2);
+  ctx.fillStyle = '#d8b074';
+  ctx.fillRect(21, 22, 2, 1);
+  // Mourões da barraca.
+  ctx.fillStyle = '#5b3c25';
+  ctx.fillRect(3, 13, 2, 12);
+  ctx.fillRect(27, 13, 2, 12);
+  // Toldo de lona: trapézio com gomos verticais e barra festonada.
+  const p = new Painter(ctx, 32, 34);
+  for (let y = 2; y <= 13; y++) {
+    const t = (y - 2) / 11;
+    const half = 12 + Math.round(t * 2.5);
+    for (let x = 16 - half; x <= 15 + half; x++) {
+      const edge = y === 2 || x === 16 - half || x === 15 + half;
+      const gomo = Math.floor((x + 32) / 4) % 2;
+      p.set(x, y, edge ? dk : gomo ? a : b);
+    }
+  }
+  // Barra: bicos do tecido pendurados.
+  for (let x = 3; x < 30; x += 4) {
+    p.set(x, 14, dk);
+    p.set(x + 1, 15, dk);
+    p.set(x + 2, 14, dk);
+  }
+  p.flush();
+  return { canvas: c, ax: 16, ay: 29 };
+}
+
+/** Pedra rúnica no lugar do totem da entrada (mesma altura, cume arredondado). */
+function runeStoneSprite(): PropSprite {
+  const [c, ctx] = makeCanvas(14, 34);
+  shadowEllipse(ctx, 7, 32, 6, 1.5, 0.25);
+  // Bloco de pedra com faces clara/escura.
+  ctx.fillStyle = '#3f434e';
+  ctx.fillRect(2, 6, 10, 26);
+  ctx.fillStyle = '#7d8590';
+  ctx.fillRect(3, 6, 8, 25);
+  ctx.fillStyle = '#959da8';
+  ctx.fillRect(3, 6, 3, 25);
+  // Cume arredondado.
+  ctx.fillStyle = '#7d8590';
+  ctx.fillRect(4, 3, 6, 3);
+  ctx.fillStyle = '#3f434e';
+  ctx.fillRect(5, 2, 4, 1);
+  ctx.fillRect(3, 4, 1, 2);
+  ctx.fillRect(10, 4, 1, 2);
+  // Runas gravadas acesas.
+  ctx.fillStyle = '#7fe0d0';
+  ctx.fillRect(6, 10, 2, 6);
+  ctx.fillRect(5, 12, 4, 1);
+  ctx.fillRect(5, 21, 4, 1);
+  ctx.fillRect(6, 19, 1, 5);
+  ctx.fillRect(8, 19, 1, 5);
+  ctx.fillStyle = 'rgba(127,224,208,0.35)';
+  ctx.fillRect(4, 17, 6, 1);
+  // Base de pedra.
+  ctx.fillStyle = '#3f434e';
+  ctx.fillRect(1, 31, 12, 2);
+  ctx.fillStyle = '#5f6673';
+  ctx.fillRect(1, 31, 12, 1);
+  return { canvas: c, ax: 7, ay: 32 };
+}
+
+/** Carroça de mão (lugar do carro): caçamba de tábuas, fardos e rodas raiadas. */
+function cartSprite(flip: boolean): PropSprite {
+  const [c, ctx] = makeCanvas(36, 20);
+  if (flip) {
+    ctx.translate(36, 0);
+    ctx.scale(-1, 1);
+  }
+  shadowEllipse(ctx, 18, 17, 16, 2, 0.3);
+  const o = '#2e3648';
+  // Timão puxado por cavalo (some na direita do sprite).
+  ctx.fillStyle = '#4a3222';
+  ctx.fillRect(30, 11, 5, 2);
+  // Caçamba: contorno, tábuas e aresta clara.
+  ctx.fillStyle = o;
+  ctx.fillRect(2, 6, 28, 9);
+  ctx.fillStyle = '#7a5232';
+  ctx.fillRect(3, 7, 26, 7);
+  ctx.fillStyle = '#a0703f';
+  ctx.fillRect(3, 7, 26, 1);
+  ctx.fillStyle = '#4a3222';
+  ctx.fillRect(3, 12, 26, 2);
+  for (let x = 5; x < 29; x += 4) {
+    ctx.fillStyle = '#5b3c25';
+    ctx.fillRect(x, 8, 1, 4);
+  }
+  // Fardos de palha e sacos na carga.
+  ctx.fillStyle = '#c99a4e';
+  ctx.fillRect(6, 2, 8, 5);
+  ctx.fillStyle = '#d8b055';
+  ctx.fillRect(6, 2, 8, 1);
+  ctx.fillStyle = '#8a6a2e';
+  ctx.fillRect(9, 3, 1, 3);
+  ctx.fillStyle = '#b9a98a';
+  ctx.fillRect(15, 3, 6, 4);
+  ctx.fillStyle = '#d8cdb4';
+  ctx.fillRect(15, 3, 6, 1);
+  ctx.fillStyle = '#8a7a5a';
+  ctx.fillRect(14, 6, 8, 1);
+  // Rodas raiadas.
+  for (const wx of [6, 23]) {
+    ctx.fillStyle = o;
+    ctx.fillRect(wx, 13, 6, 6);
+    ctx.fillStyle = '#6b7385';
+    ctx.fillRect(wx + 1, 14, 4, 4);
+    ctx.fillStyle = '#c3cad4';
+    ctx.fillRect(wx + 2, 15, 2, 2);
+    ctx.fillStyle = '#4a5260';
+    ctx.fillRect(wx + 3, 15, 1, 1);
+  }
+  return { canvas: c, ax: 18, ay: 17 };
+}
+
 export function propSprite(prop: ExteriorProp): PropSprite {
-  const key = prop.kind === 'lamp' || prop.kind === 'bench' || prop.kind === 'totem' ? prop.kind : `${prop.kind}:${prop.seed % 7}`;
+  const key = propCacheKey(prop);
   let s = cache.get(key);
   if (s) return s;
+  const fantasy = propHasFantasyArt(prop.kind);
   switch (prop.kind) {
     case 'tree':
       s = treeSprite(prop.seed % 7);
@@ -342,19 +558,19 @@ export function propSprite(prop: ExteriorProp): PropSprite {
       s = hedgeSprite(prop.seed % 7);
       break;
     case 'lamp':
-      s = lampSprite();
+      s = fantasy ? lanternSprite() : lampSprite();
       break;
     case 'bench':
-      s = benchSprite();
+      s = fantasy ? logBenchSprite() : benchSprite();
       break;
     case 'rock':
       s = rockSprite(prop.seed % 7);
       break;
     case 'parasol':
-      s = parasolSprite(prop.seed % 7);
+      s = fantasy ? stallSprite(prop.seed % 7) : parasolSprite(prop.seed % 7);
       break;
     case 'totem':
-      s = totemSprite();
+      s = fantasy ? runeStoneSprite() : totemSprite();
       break;
     default:
       // 'paving' e outros tipos desenhados pelo próprio renderer
@@ -375,9 +591,15 @@ const CAR_COLORS: [string, string, string][] = [
 
 /** Carro visto de lado (3/4), virado para a direita; `flip` desenha para a esquerda. */
 export function carSprite(variant: number, flip: boolean): PropSprite {
-  const key = `car:${variant % CAR_COLORS.length}:${flip ? 1 : 0}`;
+  const key = carCacheKey(variant % CAR_COLORS.length, flip);
   const hit = cache.get(key);
   if (hit) return hit;
+  // Na skin de fantasia o carro vira carroça de mão (mesmo tamanho e âncora).
+  if (isFantasy()) {
+    const cart = cartSprite(flip);
+    cache.set(key, cart);
+    return cart;
+  }
   const [body, dark, light] = CAR_COLORS[variant % CAR_COLORS.length];
   const [c, ctx] = makeCanvas(36, 20);
   if (flip) {

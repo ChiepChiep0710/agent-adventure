@@ -125,6 +125,12 @@ export interface FurnitureSprites {
   front?: Sprite;
 }
 
+/**
+ * Traje por cima da aparência: acessório sazonal (Papai Noel, bruxa...) ou classe de RPG da skin de
+ * fantasia (mago, cavaleiro, ladino, clérigo, ferreiro, estudioso). Ver `world/render/fantasy-class.ts`.
+ */
+export type Costume = 'santa' | 'witch' | 'pumpkin' | 'vampire' | 'mage' | 'knight' | 'rogue' | 'cleric' | 'smith' | 'scholar';
+
 export interface CharacterFrameRequest {
   appearance: Appearance;
   dir: Dir;
@@ -133,8 +139,8 @@ export interface CharacterFrameRequest {
   held?: HeldItem;
   /** Para poses que podem ser em pé ou sentado (raise_hand, read, talk). */
   seated?: boolean;
-  /** Acessório sazonal; ausente mantém a aparência original. */
-  costume?: 'santa' | 'witch' | 'pumpkin' | 'vampire';
+  /** Acessório sazonal ou classe de fantasia; ausente mantém a aparência original. */
+  costume?: Costume;
 }
 
 export type FurnitureKind =

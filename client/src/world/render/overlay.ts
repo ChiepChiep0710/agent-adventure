@@ -14,6 +14,7 @@ import type { Sim } from '../sim/sim';
 import { buildAnim } from './anim';
 import { drawFxBanner } from './github-fx';
 import type { HeadInfo, Renderer } from './renderer';
+import { isFantasy } from '../../art/skin';
 import { tr } from '../../../../shared/i18n';
 
 // A Pixelify Sans tem o "C" maiúsculo quase fechado (lê-se "Oopa" em vez de "Copa") em qualquer
@@ -25,6 +26,7 @@ const SAY_FONT = `500 10.5px ${UI_FONT}`;
 const FLOAT_FONT = `800 12px ${UI_FONT}`;
 const CHIP_FONT = `700 8px ${UI_FONT}`;
 const BADGE_FONT = `700 8px ${UI_FONT}`;
+const MARKER_FONT = `800 11px ${UI_FONT}`;
 const ROOM_FONT = `700 12px ${UI_FONT}`;
 const CORE_FONT = `600 11px ${UI_FONT}`;
 const CORE_FONT_SMALL = `600 9.5px ${UI_FONT}`;
@@ -60,6 +62,51 @@ export const SAY_MAX_W = 170;
 const SAY_H = 17;
 /** Ícone do balão de espera de shell. */
 export const SHELL_BUBBLE_ICON = '⏳';
+/** Altura (px CSS) da faixa da marca de status acima do balão (skin de fantasia). */
+export const MARKER_H = 14;
+
+/** Cores de um balão: no escritório as de sempre; na fantasia, pergaminho com borda marrom. */
+export function bubblePalette(tone: Tone, fantasy: boolean): { bg: string; border: string; fg: string } {
+  if (fantasy) {
+    switch (tone) {
+      case 'alert':
+        // pedido do agente: pergaminho dourado (continua sendo o balão mais chamativo)
+        return { bg: '#f7dc96', border: '#8a5a12', fg: '#42270a' };
+      case 'deliver':
+        return { bg: '#efe0bd', border: '#a37b3c', fg: '#4a3418' };
+      case 'say':
+        return { bg: '#faf1dc', border: 'rgba(120,90,50,0.45)', fg: '#3b2a17' };
+      case 'shell':
+        // espera de shell continua terminal (texto verde): é o que menos combina com pergaminho
+        return { bg: '#1d2433', border: '#4b5d7e', fg: '#b9f6b4' };
+      default:
+        return { bg: '#f6e8c8', border: '#8a6a3f', fg: '#3b2a17' };
+    }
+  }
+  switch (tone) {
+    case 'alert':
+      return { bg: '#ffcf4a', border: '#c58f10', fg: '#3b2a00' };
+    case 'deliver':
+      return { bg: '#e2f0ff', border: '#7aa7d9', fg: '#17324f' };
+    case 'say':
+      return { bg: '#ffffff', border: 'rgba(40,48,66,0.38)', fg: '#1d2330' };
+    case 'shell':
+      return { bg: '#1d2433', border: '#4b5d7e', fg: '#b9f6b4' };
+    default:
+      return { bg: '#fffdf8', border: 'rgba(40,48,66,0.22)', fg: '#232a36' };
+  }
+}
+
+/**
+ * Marca de status sobre o balão (só na skin de fantasia): 'quest' = o clássico "!" dourado de missão,
+ * para quem precisa de você (pedido/pergunta/espera); 'done' = "✓" dourado de tarefa entregue.
+ * Trabalhando não leva marca extra: o ícone da atividade já diz o que está acontecendo.
+ */
+export function statusMarker(tone: Tone): 'quest' | 'done' | null {
+  if (tone === 'alert') return 'quest';
+  if (tone === 'deliver') return 'done';
+  return null;
+}
 
 interface Bubble {
   type: 'bubble';
@@ -85,6 +132,8 @@ interface Bubble {
   fitted: string;
   /** Subiu um degrau para desviar: o rabicho desce até a cabeça. */
   lifted: boolean;
+  /** Marca de status na faixa acima do balão (skin de fantasia); vazia = sem faixa extra. */
+  marker: 'quest' | 'done' | '';
 }
 
 interface Label {
@@ -598,7 +647,7 @@ export class Overlay {
   private takeBubble(ch: Character, head: HeadInfo, icon: string, text: string, tone: Tone, prio: number, alpha: number, changedAt: number): Bubble {
     let b = this.bubblePool[this.nb];
     if (!b) {
-      b = { type: 'bubble', ch, head, icon, text, tone, prio, alpha, chip: false, extraLift: 0, changedAt, x: 0, y: 0, w: 0, h: 0, fitted: '', lifted: false };
+      b = { type: 'bubble', ch, head, icon, text, tone, prio, alpha, chip: false, extraLift: 0, changedAt, x: 0, y: 0, w: 0, h: 0, fitted: '', lifted: false, marker: '' };
       this.bubblePool[this.nb] = b;
     } else {
       b.ch = ch;
@@ -613,6 +662,7 @@ export class Overlay {
       b.changedAt = changedAt;
       b.lifted = false;
     }
+    b.marker = isFantasy() ? statusMarker(tone) ?? '' : '';
     this.nb++;
     return b;
   }
@@ -696,7 +746,10 @@ export class Overlay {
       b.fitted = this.fit(BUBBLE_FONT, b.text, maxW - 16 - iconW);
       b.w = Math.round(Math.min(maxW, this.measure(BUBBLE_FONT, b.fitted) + iconW + 14));
     }
-    b.h = say && !b.chip ? SAY_H : BUBBLE_H;
+    // A marca de status ocupa uma faixa acima do corpo do balão: ela entra na altura reservada, então o
+    // desvio de colisão já conta o "!" dourado (o corpo é desenhado abaixo da faixa).
+    const mk = b.marker && !b.chip ? MARKER_H : 0; // no chip (só ícone) não cabe a faixa
+    b.h = (say && !b.chip ? SAY_H : BUBBLE_H) + mk;
     b.x = Math.max(4, Math.min(camera.viewW - b.w - 4, Math.round(headX - b.w / 2)));
     b.y = Math.round(headY - lift - b.h - 6);
   }
@@ -732,15 +785,18 @@ export class Overlay {
 
   private drawBubble(b: Bubble, now: number): void {
     const { ctx } = this;
-    const { x, y, w, h } = b;
+    // o corpo do balão fica abaixo da faixa da marca de status (quando existe)
+    const mk = b.marker && !b.chip ? MARKER_H : 0;
+    const { x, w } = b;
+    const y = b.y + mk;
+    const h = b.h - mk;
     const headX = this.sx(b.head.x);
     const tone = b.tone;
-    const bg = tone === 'alert' ? '#ffcf4a' : tone === 'deliver' ? '#e2f0ff' : tone === 'shell' ? '#1d2433' : tone === 'say' ? '#ffffff' : '#fffdf8';
-    const border = tone === 'alert' ? '#c58f10' : tone === 'deliver' ? '#7aa7d9' : tone === 'shell' ? '#4b5d7e' : tone === 'say' ? 'rgba(40,48,66,0.38)' : 'rgba(40,48,66,0.22)';
-    const fg = tone === 'alert' ? '#3b2a00' : tone === 'deliver' ? '#17324f' : tone === 'shell' ? '#b9f6b4' : tone === 'say' ? '#1d2330' : '#232a36';
+    const { bg, border, fg } = bubblePalette(tone, isFantasy());
     const pulse = tone === 'alert' ? 1 + Math.sin(now / 160) * 0.035 : 1;
     ctx.save();
     ctx.globalAlpha = b.alpha;
+    if (b.marker) this.drawStatusMarker(b, x + w / 2, b.y + mk / 2);
     if (b.lifted) {
       // conector até a posição normal do rabicho (o balão subiu para desviar de outro)
       const tx = Math.max(x + 8, Math.min(x + w - 8, Math.round(headX)));
@@ -803,6 +859,34 @@ export class Overlay {
       ctx.fillText(b.fitted, tx, y + h / 2 + 1);
     }
     ctx.restore();
+  }
+
+  /**
+   * Marca de status sobre o balão (skin de fantasia): "!" dourado de missão para quem precisa de você e
+   * "✓" de tarefa entregue. Desenhada em espaço de tela, na faixa reservada acima do corpo do balão.
+   */
+  private drawStatusMarker(b: Bubble, cx: number, cy: number): void {
+    const { ctx } = this;
+    const s = MARKER_H - 2;
+    const x = Math.round(cx - s / 2);
+    const y = Math.round(cy - s / 2);
+    const quest = b.marker === 'quest';
+    ctx.fillStyle = 'rgba(16,20,32,0.22)';
+    ctx.beginPath();
+    ctx.roundRect(x, y + 1.5, s, s, 3);
+    ctx.fill();
+    ctx.fillStyle = quest ? '#ffd24a' : '#f6e8c8';
+    ctx.strokeStyle = quest ? '#8a5a12' : '#a37b3c';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(x + 0.5, y + 0.5, s - 1, s - 1, 3);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = quest ? '#4a2c00' : '#8a5a12';
+    ctx.font = MARKER_FONT;
+    ctx.textAlign = 'center';
+    ctx.fillText(quest ? '!' : '✓', cx, cy + 3.5);
+    ctx.textAlign = 'left';
   }
 
   /** Mini-balões das conversas (só emoji). */
