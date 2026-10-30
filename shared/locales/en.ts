@@ -3307,4 +3307,13 @@ export const EN: Readonly<Record<string, string>> = {
   "Skin do escritório": "Office skin",
   "Fantasia (RPG)": "Fantasy (RPG)",
   "Fantasia: o escritório vira um RPG — uso do plano em HP/MP, diário de missões e molduras medievais. Trocar recarrega a página.": "Fantasy: the office becomes an RPG — plan usage as HP/MP, a quest log and medieval frames. Switching reloads the page.",
+
+  // client/src/world/render/boss.ts
+  "Múmia de Arenito": "Sandstone Mummy",
+  "Rei dos Ossos": "Bone King",
+  "Golem de Magma": "Magma Golem",
+  "Guardião de Gelo": "Frost Warden",
+  "Horror de Musgo": "Moss Horror",
+  "Rainha de Cristal": "Crystal Queen",
+  "Rei Afogado": "Drowned King",
 };
