@@ -117,8 +117,8 @@ export function layoutProjectArena(room: RoomInput, theme: RoomTheme): AreaLayou
   // ---- piso: lajes de pedra da câmara, borda de pedra e areia do poço da arena.
   // (o "anel" do poço é desenhado pelo piso: calçamento em volta da areia — sem kind novo para isso)
   b.floor('marble', 0, 0, 16, 12, room.seed, theme.carpet);
-  b.floor('concrete', 3, 3, 10, 6, room.seed + 1);
-  b.floor('sand', 4, 4, 8, 4, room.seed + 2);
+  b.floor('concrete', 3, 3, 10, 5, room.seed + 1);
+  b.floor('sand', 4, 4, 8, 3, room.seed + 2);
   // entrada de pedra da porta até a borda do poço
   b.floor('concrete', DOOR_X, north ? 8 : 2, DOOR_W, north ? 3 : 1, room.seed + 3);
 
@@ -155,13 +155,15 @@ export function layoutProjectArena(room: RoomInput, theme: RoomTheme): AreaLayou
   // Mesmos ranks/lados/deskId da ilha de mesas da sala; quem senta continua "na mesa".
   const deskV = theme.deskVariant;
   const chairV = theme.chairVariant;
+  // A mesa fica ATRÁS do banco (o herói senta de costas para a mesa e de frente para o poço): assim
+  // nada se desenha na frente de quem duela e a cena de luta (nos pés, ao lado) fica à vista.
   const ranks = [2, 0, 4];
   for (let i = 0; i < 3; i++) {
     const lx = 2 + i * 2;
-    const back = furn('camp_table_back', lx, 3, deskV, { order: 0.35 + i * 0.05, seat: `N${i}` });
-    const front = furn('camp_table', lx, 8, deskV, { order: 0.4 + i * 0.05, seat: `S${i}` });
-    seat('desk', 'stool', lx, 2, 'down', chairV, { dx: TILE / 2, deskId: back, rank: ranks[i] + 1, side: 'N', order: 0.55 + i * 0.03 });
-    seat('desk', 'stool', lx, 9, 'up', chairV, { dx: TILE / 2, deskId: front, rank: ranks[i], side: 'S', order: 0.6 + i * 0.03 });
+    const back = furn('camp_table_back', lx, 2, deskV, { order: 0.2 + i * 0.02, seat: `N${i}` });
+    const front = furn('camp_table', lx, 7, deskV, { order: 0.3 + i * 0.02, seat: `S${i}` });
+    seat('desk', 'stool', lx, 3, 'down', chairV, { dx: TILE / 2, deskId: back, rank: ranks[i] + 1, side: 'N', order: 0.55 + i * 0.03 });
+    seat('desk', 'stool', lx, 8, 'up', chairV, { dx: TILE / 2, deskId: front, rank: ranks[i], side: 'S', order: 0.6 + i * 0.03 });
   }
 
   // ---- quadro de missões: os agentes leem as missões no quadro da parede
@@ -171,38 +173,37 @@ export function layoutProjectArena(room: RoomInput, theme: RoomTheme): AreaLayou
   furn('brazier', 2, 5, undefined, { order: 0.44 });
   if (v.braziers > 1) furn('brazier', 13, 5, undefined, { order: 0.45 });
 
-  // ---- bancos de pedra dos espectadores + troncos extras (assentos de descanso)
-  const bench = furn('bench_stone', 10, 8, undefined, { order: 0.5 });
-  for (let i = 0; i < 2; i++) seat('stool', 'bench_stone', 10 + i, 8, 'up', undefined, { noFurniture: true, furnitureId: bench, order: 0.62 + i * 0.02 });
-  seat('stool', 'stump', 8, 10, 'up', chairV, { order: 0.64 });
-  seat('stool', 'stump', 9, 10, 'up', chairV, { order: 0.65 });
+  // ---- arquibancada: banco de pedra encostado na parede norte (2 lugares) + 2 tocos nos cantos.
+  // Tudo longe do miolo: o poço e a volta das mesas de guerra ficam livres para a luta.
+  const bench = furn('bench_stone', 11, 2, undefined, { order: 0.22 });
+  for (let i = 0; i < 2; i++) seat('stool', 'bench_stone', 11 + i, 2, 'down', undefined, { noFurniture: true, furnitureId: bench, order: 0.62 + i * 0.02 });
+  seat('stool', 'stump', 14, 2, 'left', chairV, { order: 0.64 });
+  seat('stool', 'stump', 1, 2, 'right', chairV, { order: 0.65 });
 
   // ---- armaria: armação de armas, manequim de armadura, boneco de treino e suprimentos
   furn('weapon_rack', 1, 10, undefined, { order: 0.26 });
-  furn('armor_stand', 3, 10, undefined, { order: 0.28 });
-  furn('training_dummy', 4, 10, undefined, { order: 0.29 });
-  furn('crate', 5, 10, undefined, { order: 0.34 });
-  furn('barrel', 6, 10, undefined, { order: 0.36 });
-  if (Math.floor(rng() * 2) === 1) furn('crate', 7, 10, undefined, { order: 0.35 });
-  else furn('barrel', 7, 10, undefined, { order: 0.35 });
+  furn('armor_stand', 9, 10, undefined, { order: 0.28 });
+  furn('training_dummy', 10, 10, undefined, { order: 0.29 });
+  furn('crate', 11, 10, undefined, { order: 0.34 });
+  furn('barrel', 12, 10, undefined, { order: 0.34 });
 
   // ---- canto do tesouro (baú e jaula trocam de lado conforme a semente)
   if (v.chestEast) {
-    furn('chest', 12, 10, undefined, { order: 0.33 });
-    furn('cage', 13, 10, undefined, { order: 0.32 });
-  } else {
-    furn('cage', 12, 10, undefined, { order: 0.32 });
     furn('chest', 13, 10, undefined, { order: 0.33 });
+    furn('cage', 14, 10, undefined, { order: 0.32 });
+  } else {
+    furn('cage', 13, 10, undefined, { order: 0.32 });
+    furn('chest', 14, 10, undefined, { order: 0.33 });
   }
 
   // ---- braseiro da entrada (é onde se acende/apaga a câmara) e o "interruptor"
-  furn('brazier', 14, 10, undefined, { order: 0.24 });
-  spot('switch', 11, 10, 'right', { dy: -2 });
+  furn('brazier', 1, 9, undefined, { order: 0.24 });
+  spot('switch', 9, 9, 'left', { dy: -2 });
 
   // ---- pontos em pé (subagentes sem lugar sentado trabalham aqui; também servem de conversa)
-  spot('stand', 2, 2, 'down');
+  spot('stand', 1, 2, 'down');
   spot('stand', 9, 3, 'up', { dy: -2 });
-  spot('stand', 12, 6, 'left', { dx: 2 });
+  spot('stand', 14, 9, 'left', { dx: 2 });
 
   // ---- sombreamento quando a luz está apagada (salas ao norte: a mureta sul fica clara)
   const p = { x: rect.x * TILE, y: rect.y * TILE, w: rect.w * TILE, h: rect.h * TILE };

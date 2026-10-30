@@ -40,8 +40,9 @@ do meio (0.**3**.0).
   centro (cercada de pedra e livre para o duelo), portão de ferro, correntes, tochas e estandartes na cor do tema,
   mesas de guerra e tocos em volta da arena, armarinho de armas, manequim de treino, braseiros, jaula, baú e bancos de
   pedra. Recepção vira salão de entrada, copa vira taverna subterrânea, banheiros viram câmara da fonte, lounge vira
-  sala de armas, o corredor vira galeria de tochas e o entorno vira rocha escura. O escritório (skin padrão) segue
-  igual.
+  sala de armas, o corredor vira galeria de tochas e o entorno vira rocha escura. As mesas de guerra ficam **atrás**
+  dos bancos (nada é desenhado na frente de quem duela), o poço de areia é mais largo e a tralha (armaria, baú, jaula,
+  braseiros) foi para as bordas, longe do centro — dá para ver a luta. O escritório (skin padrão) segue igual.
 - **Nomes escolhidos para os agentes do Hermes** (`hermes-names.json`). Dois campos opcionais na pasta de dados do
   Habblaud: **`pool`** (estoque de nomes: cada agente novo, principal ou subagente, recebe um nome sorteado entre os
   ainda livres; esgotado, volta ao sorteio) e **`names`** (nome fixo por session id, que ganha do estoque). O arquivo é relido
