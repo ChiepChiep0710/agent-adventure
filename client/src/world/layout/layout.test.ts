@@ -5,6 +5,7 @@ import { BUILDING_H, COL_W, CORRIDOR_Y, SOUTH_Y } from '../constants';
 import { assembleBuilding, coreAreas } from './building';
 import { FREE } from '../path/grid';
 import { arenaVariant, layoutProjectArena } from './arena';
+import { DUNGEON_BIOMES, dungeonBiome, pitShape, pitTiles, type PitShape } from './dungeon-biome';
 import { columnsFor, slotAt, slotColumn, slotRect, slotSide } from './geometry';
 import { layoutProject, layoutProjectRoom, roomVariant } from './room';
 import { layoutExterior, slotShell } from './exterior';
@@ -272,30 +273,31 @@ describe('arena da masmorra (skin de fantasia)', () => {
     }
   });
 
-  it('é uma câmara de masmorra: pedra, areia no poço, mesas de guerra, armaria e tesouro', () => {
+  it('é uma câmara de masmorra no clima do bioma sorteado: piso, poço, mesas e cenário', () => {
+    const v = arenaVariant(1234, dungeonTheme);
     const a = arena(0, 1234);
-    // piso: lajes da câmara, borda de pedra e areia do poço da arena
     const kinds = a.floors.map((f) => f.kind);
-    expect(kinds).toContain('marble');
-    expect(kinds).toContain('concrete');
-    expect(kinds).toContain('sand');
+    // piso da câmara, borda e material do poço vêm do bioma
+    for (const k of [v.biome.base, v.biome.ring, v.biome.pit] as const) expect(kinds, k).toContain(k);
     // nada de piso de escritório (nem grama) na câmara
     const indoor = a.floors.filter((f) => ['carpet', 'tile_check', 'tile_white', 'grass', 'sidewalk'].includes(f.kind));
     expect(indoor).toEqual([]);
-    // paredes e mureta: pedra de masmorra (blocos irregulares), nada de mata nem cerca viva
-    expect(a.walls.every((w) => w.style.pattern === 'dungeon')).toBe(true);
+    // paredes e mureta no padrão do bioma (alvenaria, rocha natural, gelo ou tijolo de forja)
+    expect(a.walls.every((w) => w.style.pattern === v.biome.wall)).toBe(true);
     expect(a.walls.some((w) => w.kind === 'face')).toBe(true);
     expect(a.walls.some((w) => w.kind === 'south')).toBe(true);
-    // 6 mesas de guerra (3 de cada lado do poço) e os móveis da câmara
+    // 6 mesas de guerra (3 de cada lado do poço), a armaria do duelo e o cenário do bioma
     const fk = new Set(a.furniture.map((f) => f.kind));
-    for (const k of ['camp_table', 'camp_table_back', 'brazier', 'weapon_rack', 'armor_stand', 'training_dummy', 'bench_stone', 'crate', 'barrel'] as const) {
+    for (const k of ['camp_table', 'camp_table_back', 'brazier', 'weapon_rack', 'armor_stand', 'bench_stone'] as const) {
       expect(fk.has(k), k).toBe(true);
     }
     expect(a.furniture.filter((f) => f.kind === 'camp_table' || f.kind === 'camp_table_back')).toHaveLength(6);
+    expect(a.furniture.some((f) => v.biome.props.includes(f.kind)), `cenário do bioma ${v.biome.id}`).toBe(true);
     expect(a.furniture.some((f) => f.kind === 'chest' || f.kind === 'cage')).toBe(true);
-    // itens de parede da masmorra: grade levadiça, corrente, tochas e estandartes do tema
+    // itens de parede: grade levadiça, corrente, tochas, estandartes do tema e as marcas do bioma
     const wk = a.wallItems.map((w) => w.kind);
     for (const k of ['portcullis', 'chain', 'wall_torch', 'banner'] as const) expect(wk, k).toContain(k);
+    for (const k of v.biome.wallProps) expect(wk, k).toContain(k);
     expect(a.wallItems.filter((w) => w.kind === 'banner' && w.variant !== undefined)).toHaveLength(2);
   });
 
@@ -378,7 +380,7 @@ describe('layoutProject: a skin decide o cenário do projeto', () => {
     expect(fantasy.furniture.some((f) => f.kind === 'brazier')).toBe(true);
     expect(fantasy.furniture.some((f) => f.kind === 'weapon_rack')).toBe(true);
     expect(fantasy.furniture.some((f) => f.kind === 'desk')).toBe(false);
-    expect(fantasy.floors.some((f) => f.kind === 'sand')).toBe(true);
+    expect(fantasy.floors.some((f) => f.kind === arenaVariant(4242, theme).biome.pit)).toBe(true);
     expect(fantasy.door).toEqual(office.door);
     expect(fantasy.rect).toEqual(office.rect);
   });
@@ -394,14 +396,15 @@ describe('núcleo e corredor da masmorra (skin de fantasia)', () => {
         expect(a.floors.some((f) => f.kind === 'grass' || f.kind === 'sidewalk'), a.id).toBe(false);
         // paredes de masmorra (a taverna tem o enxaimel atrás da bancada)
         const patterns = a.walls.map((w) => w.style.pattern);
-        expect(patterns.every((p) => p === 'dungeon' || p === 'wood_panel'), a.id).toBe(true);
-        expect(patterns, a.id).toContain('dungeon');
+        const dungeonPatterns = DUNGEON_BIOMES.map((bb) => bb.wall);
+        expect(patterns.every((p) => p === 'wood_panel' || (p !== undefined && dungeonPatterns.includes(p))), a.id).toBe(true);
+        expect(patterns.some((p) => p !== undefined && dungeonPatterns.includes(p)), a.id).toBe(true);
       }
-      // pisos de masmorra: lajes na recepção e na sala de armas, tábuas velhas na taverna, ardósia no banho
-      expect(layoutReception().floors[0].kind).toBe('marble');
-      expect(layoutRestroom().floors[0].kind).toBe('tile_white');
+      // pisos de masmorra: o piso do bioma (a taverna mantém as tábuas velhas)
+      expect(layoutReception().floors[0].kind).toBe(dungeonBiome(101, 2).hall);
+      expect(layoutRestroom().floors[0].kind).toBe(dungeonBiome(201, 2).hall);
       expect(layoutCafe().floors[0].kind).toBe('wood');
-      expect(layoutLounge().floors[0].kind).toBe('marble');
+      expect(layoutLounge().floors[0].kind).toBe(dungeonBiome(401, 2).hall);
       // portão levadiço na entrada, tochas de parede e estandarte na taverna
       expect(layoutReception().wallItems.some((w) => w.kind === 'portcullis')).toBe(true);
       expect(areas.some((a) => a.wallItems.some((w) => w.kind === 'wall_torch'))).toBe(true);
@@ -417,7 +420,7 @@ describe('núcleo e corredor da masmorra (skin de fantasia)', () => {
       expect(layoutRestroom().door).toEqual({ x: 7, y: SOUTH_Y, w: 2, h: 2 });
       // corredor: calçamento de pedra de ponta a ponta, braseiros nos portões e nenhuma planta
       const corr = layoutCorridor(4);
-      expect(corr.floors.every((f) => f.kind === 'concrete')).toBe(true);
+      expect(corr.floors.every((f) => f.kind === dungeonBiome(501, 3).hall)).toBe(true);
       expect(corr.furniture.some((f) => f.kind === 'brazier')).toBe(true);
       expect(corr.furniture.some((f) => f.kind === 'plant_tall' || f.kind === 'plant_small')).toBe(false);
       expect(corr.furniture.some((f) => f.kind === 'bench_stone')).toBe(true);
@@ -430,6 +433,65 @@ describe('núcleo e corredor da masmorra (skin de fantasia)', () => {
       expect(shell.props.some((p) => p.kind === 'parasol' || p.kind === 'flowers')).toBe(false);
     } finally {
       setSkinForTests(undefined);
+    }
+  });
+});
+
+describe('biomas da masmorra: cada câmara nasce num clima diferente', () => {
+  const dungeonTheme: RoomTheme = { ...theme, carpet: '#43464a', carpet2: '#3b3e42', accent: '#b04a3a', wall: { base: '#5d5f60', trim: '#3a3c3d', pattern: 'plain' } };
+  it('o bioma e o formato do poço são determinísticos pela semente', () => {
+    for (const seed of [1, 7, 99, 4242, 15867]) {
+      expect(dungeonBiome(seed, 1).id).toBe(dungeonBiome(seed, 1).id);
+      expect(pitShape(seed, 1)).toBe(pitShape(seed, 1));
+      expect(arenaVariant(seed, dungeonTheme).biome).toEqual(dungeonBiome(seed, 1));
+    }
+    // sal separa os sorteios: o mesmo bioma pode vestir as áreas comuns com outro sorteio
+    const ids = new Set(Array.from({ length: 40 }, (_, i) => dungeonBiome(i * 31 + 5, 2).id));
+    expect(ids.size).toBeGreaterThanOrEqual(4);
+  });
+
+  it('sorteia biomas e formatos de poço variados', () => {
+    const seeds = Array.from({ length: 400 }, (_, i) => (i * 7919 + 3) >>> 0);
+    const biomes = new Set(seeds.map((sd) => dungeonBiome(sd, 1).id));
+    expect(biomes.size).toBe(DUNGEON_BIOMES.length);
+    const shapes = new Set(seeds.map((sd) => pitShape(sd, 1)));
+    expect(shapes.size).toBe(4);
+    // nenhum bioma domina a ponto de aparecer em mais de 40% das câmaras
+    for (const bio of DUNGEON_BIOMES) {
+      const n = seeds.filter((sd) => dungeonBiome(sd, 1).id === bio.id).length;
+      expect(n / seeds.length, bio.id).toBeLessThan(0.4);
+      expect(n, bio.id).toBeGreaterThan(0);
+    }
+  });
+
+  it('todo formato de poço mantém o miolo de 4x3 dentro do poço', () => {
+    for (const shape of ['square', 'round', 'cross', 'ring'] as PitShape[]) {
+      const tiles = new Set(pitTiles(shape).map(([x, y]) => `${x},${y}`));
+      for (let y = 0; y < 3; y++) for (let x = 2; x <= 5; x++) expect(tiles.has(`${x},${y}`), `${shape} ${x},${y}`).toBe(true);
+      expect(tiles.size).toBeGreaterThan(8);
+    }
+  });
+
+  it('cada bioma tem piso, poço e parede próprios (nenhum repete o conjunto inteiro)', () => {
+    const keys = DUNGEON_BIOMES.map((bb) => `${bb.base}|${bb.pit}|${bb.wall}`);
+    expect(new Set(keys).size).toBe(DUNGEON_BIOMES.length);
+    for (const bb of DUNGEON_BIOMES) {
+      expect(bb.props.length, bb.id).toBeGreaterThanOrEqual(2);
+      expect(FURNITURE[bb.props[0]].mount, bb.id).toBe('floor');
+      for (const w of bb.wallProps) expect(FURNITURE[w].mount, `${bb.id}/${w}`).toBe('wall');
+    }
+  });
+
+  it('sementes cobertas: as 6 mesas e o poço livre valem em todos os biomas', () => {
+    // uma semente por bioma, achada por sorteio — garante que o contrato não quebra em nenhum clima
+    for (const bio of DUNGEON_BIOMES) {
+      const seed = Array.from({ length: 500 }, (_, i) => (i * 104729 + 11) >>> 0).find((sd) => dungeonBiome(sd, 1).id === bio.id)!;
+      const a = layoutProjectArena({ id: `/p/${bio.id}`, slot: 0, seed }, dungeonTheme);
+      expect(a.furniture.filter((f) => f.kind === 'camp_table' || f.kind === 'camp_table_back')).toHaveLength(6);
+      const kinds = new Set(a.floors.map((f) => f.kind));
+      expect(kinds.has(bio.base), bio.id).toBe(true);
+      expect(kinds.has(bio.pit), bio.id).toBe(true);
+      expect(a.walls.every((w) => w.style.pattern === bio.wall), bio.id).toBe(true);
     }
   });
 });

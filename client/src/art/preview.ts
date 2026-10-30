@@ -43,10 +43,10 @@ const SCREEN_PT: Record<ScreenMode, string> = {
   off: 'desligado', standby: 'em espera', idle: 'descanso', code: 'código', terminal: 'terminal', browser: 'navegador', search: 'busca', chat: 'chat', docs: 'documento', tasks: 'tarefas', alert: 'alerta',
   progress: 'progresso', show: 'programa', game: 'videogame',
 };
-const FLOORS: readonly FloorKind[] = ['carpet', 'wood', 'tile_check', 'tile_white', 'concrete', 'marble', 'grass', 'sidewalk', 'street', 'sand', 'rock'];
+const FLOORS: readonly FloorKind[] = ['carpet', 'wood', 'tile_check', 'tile_white', 'concrete', 'marble', 'grass', 'sidewalk', 'street', 'sand', 'rock', 'ash', 'ice', 'water', 'moss', 'bone'];
 const FLOOR_PT: Record<FloorKind, string> = {
   carpet: 'carpete', wood: 'madeira', tile_check: 'xadrez', tile_white: 'azulejo', concrete: 'cimento polido', marble: 'mármore', grass: 'grama', sidewalk: 'calçada', street: 'asfalto',
-  sand: 'areia da arena', rock: 'rocha',
+  sand: 'areia da arena', rock: 'rocha', ash: 'cinza vulcânica', ice: 'gelo', water: 'água parada', moss: 'musgo', bone: 'ossos',
 };
 const ICONS: readonly IconName[] = [
   'alert', 'question', 'zzz', 'check', 'heart', 'coffee', 'music', 'idea', 'sweat', 'star', 'lightning', 'chat', 'box', 'wave',

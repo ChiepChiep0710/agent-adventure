@@ -4,6 +4,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { FURNITURE, TILE, type FurnitureKind } from './api';
 import { renderFurniture } from './furniture';
+import { fantasyBuild } from './furniture/fantasy';
 import { setSkinForTests } from './skin';
 
 const KINDS = Object.keys(FURNITURE) as FurnitureKind[];
@@ -20,13 +21,23 @@ const REPLACED: FurnitureKind[] = [
   'bench', 'mirror', 'shelf_wall', 'sign', 'door_frame', 'light_switch', 'elevator',
 ];
 
+/** Props dos biomas da masmorra (cada câmara tem um clima próprio). */
+const DUNGEON: FurnitureKind[] = [
+  'sarcophagus', 'bone_pile', 'mushroom_cluster', 'crystal_shard', 'ice_spike', 'lava_pool', 'web_wall',
+];
+
 /** Kinds só das câmaras de fantasia (sem equivalente no escritório): só precisam renderizar na fantasia. */
 const ARENA_ONLY: FurnitureKind[] = [
   // acampamento (kinds antigos, ainda no catálogo)
   'campfire', 'camp_table', 'camp_table_back', 'stump', 'log_seat', 'tent', 'quest_board', 'bedroll', 'crate', 'barrel', 'camp_tree', 'camp_bush', 'lantern_post',
   // arena da masmorra
   'brazier', 'weapon_rack', 'armor_stand', 'training_dummy', 'cage', 'chest', 'bench_stone', 'portcullis', 'chain', 'wall_torch', 'banner',
+  // biomas da masmorra (cripta, gruta de musgo, caverna de gelo, forja vulcânica, covil)
+  ...DUNGEON,
 ];
+
+/** Props dos biomas da masmorra com a região de luz que o render usa. */
+const GLOWING: FurnitureKind[] = ['mushroom_cluster', 'crystal_shard', 'lava_pool'];
 
 /** Resumo FNV-1a dos bytes (sprites iguais byte a byte dão o mesmo resumo). */
 function digest(data: Uint8ClampedArray): string {
@@ -192,9 +203,74 @@ describe('móveis da skin de fantasia', () => {
     expect(digest(red)).not.toBe(digest(blue));
   });
 
+  it('os biomas da masmorra têm props próprios, opacos e no tamanho do footprint', () => {
+    setSkinForTests('fantasy');
+    for (const kind of DUNGEON) {
+      const def = FURNITURE[kind];
+      const f = renderFurniture(kind, undefined, 0, 0).base;
+      const tag = kind;
+      expect(f.buf.countOpaque(), tag).toBeGreaterThan(60);
+      // Sempre com contorno: nada de sprite vazio nem de área dinâmica fora do buffer.
+      for (const r of Object.values(f.rects ?? {})) {
+        if (!r) continue;
+        expect(r.x + r.w, tag).toBeLessThanOrEqual(f.buf.w);
+        expect(r.y + r.h, tag).toBeLessThanOrEqual(f.buf.h);
+      }
+      if (def.mount === 'floor') {
+        // A silhueta acompanha o footprint (2x1 = 32px, 1x1 = 16px) e assenta no chão.
+        const px = def.footprint.w * TILE;
+        expect(f.buf.w, `${tag} largura`).toBeGreaterThanOrEqual(px - 6);
+        expect(f.buf.w, `${tag} largura`).toBeLessThanOrEqual(px + 18);
+        expect(f.buf.h, `${tag} altura`).toBeGreaterThan(6);
+        expect(f.buf.h - f.ay, `${tag} sombra`).toBeLessThanOrEqual(5);
+      } else {
+        // Item de parede: desenhado na faixa da parede, acima da linha do rodapé.
+        expect(f.ay - f.buf.h, `${tag} faixa`).toBeLessThanOrEqual(2 * TILE);
+        expect(f.ay, `${tag} âncora`).toBeGreaterThan(0);
+        expect(f.buf.w, `${tag} largura`).toBeLessThanOrEqual(TILE + 8);
+      }
+      // Tecido da parede da masmorra é alto e estreito: teia tem mais altura que largura.
+      if (kind === 'web_wall') expect(f.buf.h, kind).toBeGreaterThan(f.buf.w);
+    }
+  });
+
+  it('os props luminosos expõem rects.glow dentro do sprite, e a teia expõe só a parede', () => {
+    setSkinForTests('fantasy');
+    for (const kind of GLOWING) {
+      const g = renderFurniture(kind).base.rects?.glow;
+      expect(g, kind).toBeDefined();
+      if (!g) continue;
+      expect(g.w * g.h, kind).toBeGreaterThan(40);
+      expect(g.x, kind).toBeGreaterThanOrEqual(0);
+      expect(g.y, kind).toBeGreaterThanOrEqual(0);
+    }
+    // Sem fonte de luz os props não inventam a região.
+    for (const kind of ['bone_pile', 'ice_spike', 'sarcophagus', 'web_wall'] as const) {
+      expect(renderFurniture(kind).base.rects?.glow, kind).toBeUndefined();
+    }
+  });
+
+  it('os props dos biomas deixam 1px de margem (o contorno automático não é cortado)', () => {
+    const kinds: FurnitureKind[] = ['sarcophagus', 'bone_pile', 'mushroom_cluster', 'crystal_shard', 'ice_spike', 'lava_pool', 'web_wall'];
+    for (const kind of kinds) {
+      const raw = fantasyBuild(kind, undefined, 0, 0);
+      expect(raw, kind).toBeDefined();
+      const buf = raw!.base.buf;
+      const b = buf.bounds();
+      expect(b, kind).not.toBeNull();
+      if (!b) continue;
+      // Antes do recorte: conteúdo a pelo menos 1px de cada borda do buffer.
+      expect(b.x, `${kind} esquerda`).toBeGreaterThanOrEqual(1);
+      expect(b.y, `${kind} topo`).toBeGreaterThanOrEqual(1);
+      expect(b.x + b.w, `${kind} direita`).toBeLessThanOrEqual(buf.w - 1);
+      expect(b.y + b.h, `${kind} base`).toBeLessThanOrEqual(buf.h - 1);
+    }
+  });
+
   it('é determinístico: mesma seed, mesmo sprite', () => {
     setSkinForTests('fantasy');
-    for (const kind of ['desk', 'bookshelf', 'meeting_table', 'painting', 'shelf_wall', 'reception_desk'] as const) {
+    const kinds: FurnitureKind[] = ['desk', 'bookshelf', 'meeting_table', 'painting', 'shelf_wall', 'reception_desk', ...DUNGEON];
+    for (const kind of kinds) {
       const a = renderFurniture(kind, undefined, 0, 3).base.buf.data;
       const b = renderFurniture(kind, undefined, 0, 3).base.buf.data;
       expect(digest(a)).toBe(digest(b));

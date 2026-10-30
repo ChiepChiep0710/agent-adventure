@@ -21,6 +21,7 @@ import { FURNITURE, type Dir, type FurnitureKind, type RoomTheme, type WallStyle
 import { mulberry32 } from '../../../../shared/hash';
 import { DOOR_W, DOOR_X, TILE } from '../constants';
 import { AreaBuilder, type SpotOpts } from './builder';
+import { biomeWall, dungeonBiome, pitShape, pitTiles, type DungeonBiome, type PitShape } from './dungeon-biome';
 import { slotRect, slotSide } from './geometry';
 import type { AreaLayout, SpotDef, SpotKind } from './types';
 import type { RoomInput } from './room';
@@ -39,6 +40,10 @@ export interface ArenaVariant {
   chestEast: boolean;
   /** Quantos braseiros a borda do poço ganha (1 ou 2). */
   braziers: number;
+  /** Clima da câmara (piso, parede e cenário). */
+  biome: DungeonBiome;
+  /** Formato do poço da arena. */
+  pit: PitShape;
 }
 
 /** Cor de estandarte mais próxima do acento do tema (a arena segue a identidade da sala). */
@@ -67,6 +72,8 @@ export function arenaVariant(seed: number, theme: RoomTheme): ArenaVariant {
     banner2: BANNERS[(i + 2) % BANNERS.length],
     chestEast: rng() < 0.5,
     braziers: rng() < 0.55 ? 2 : 1,
+    biome: dungeonBiome(seed, 1),
+    pit: pitShape(seed, 1),
   };
 }
 
@@ -95,10 +102,9 @@ export function layoutProjectArena(room: RoomInput, theme: RoomTheme): AreaLayou
 
   // ---- "paredes": pedra escura da masmorra na face norte e parapeito baixo de pedra ao sul.
   // O tom sai do tema (cada câmara é uma parte diferente da masmorra).
-  const base = theme.wall.base;
-  const trim = theme.wall.trim ?? shade(base, -0.2);
-  const wall: WallStyle = { base: shade(base, -0.1), trim: shade(trim, -0.18), pattern: 'dungeon' };
-  const parapet: WallStyle = { base: shade(base, -0.24), trim: shade(trim, -0.32), pattern: 'dungeon' };
+  const biome = v.biome;
+  const wall: WallStyle = biomeWall(biome, 0.05);
+  const parapet: WallStyle = biomeWall(biome, 0.55);
 
   // ---- espelhamento (coordenadas locais pensadas com o canto do tesouro a leste)
   const mir = v.mirror;
@@ -116,11 +122,14 @@ export function layoutProjectArena(room: RoomInput, theme: RoomTheme): AreaLayou
 
   // ---- piso: lajes de pedra da câmara, borda de pedra e areia do poço da arena.
   // (o "anel" do poço é desenhado pelo piso: calçamento em volta da areia — sem kind novo para isso)
-  b.floor('marble', 0, 0, 16, 12, room.seed, theme.carpet);
-  b.floor('concrete', 3, 3, 10, 5, room.seed + 1);
-  b.floor('sand', 4, 4, 8, 3, room.seed + 2);
+  // O bioma decide a matéria: piso da câmara, anel em volta do poço e o material do próprio poço.
+  b.floor(biome.base, 0, 0, 16, 12, room.seed, theme.carpet);
+  b.floor(biome.ring, 3, 3, 10, 5, room.seed + 1);
+  // O formato do poço varia por semente (quadrado, octogonal, cruz, ferradura); o miolo de 4x3
+  // do centro fica sempre dentro do poço, que é onde os duelos acontecem.
+  for (const [dx, dy] of pitTiles(v.pit)) b.floor(biome.pit, 4 + dx, 4 + dy, 1, 1, room.seed + 2 + dx * 3 + dy * 7);
   // entrada de pedra da porta até a borda do poço
-  b.floor('concrete', DOOR_X, north ? 8 : 2, DOOR_W, north ? 3 : 1, room.seed + 3);
+  b.floor(biome.ring, DOOR_X, north ? 8 : 2, DOOR_W, north ? 3 : 1, room.seed + 3);
 
   // ---- parede norte (com a passagem da porta nas salas ao sul) e parapeito sul
   if (north) {
@@ -150,6 +159,9 @@ export function layoutProjectArena(room: RoomInput, theme: RoomTheme): AreaLayou
   // estandartes nas pontas, nas cores do acento do tema
   wallItem('banner', 1.2, v.banner, { order: 0.15 });
   wallItem('banner', 14.9, v.banner2, { order: 0.16 });
+  // marcas do bioma na parede: teias, correntes, tochas extras (2 posições livres)
+  const wallSpots = [4.3, 13.6];
+  biome.wallProps.slice(0, wallSpots.length).forEach((k, i) => wallItem(k, wallSpots[i], undefined, { order: 0.18 + i * 0.01 }));
 
   // ---- mesas de guerra: os 6 lugares de trabalho (3 ao norte, 3 ao sul do poço), com banqueta.
   // Mesmos ranks/lados/deskId da ilha de mesas da sala; quem senta continua "na mesa".
@@ -180,12 +192,25 @@ export function layoutProjectArena(room: RoomInput, theme: RoomTheme): AreaLayou
   seat('stool', 'stump', 14, 2, 'left', chairV, { order: 0.64 });
   seat('stool', 'stump', 1, 2, 'right', chairV, { order: 0.65 });
 
-  // ---- armaria: armação de armas, manequim de armadura, boneco de treino e suprimentos
+  // ---- armaria do duelo (sempre) + o cenário do bioma nas bordas
   furn('weapon_rack', 1, 10, undefined, { order: 0.26 });
   furn('armor_stand', 9, 10, undefined, { order: 0.28 });
-  furn('training_dummy', 10, 10, undefined, { order: 0.29 });
-  furn('crate', 11, 10, undefined, { order: 0.34 });
-  furn('barrel', 12, 10, undefined, { order: 0.34 });
+  // o cenário do bioma ocupa 3 tiles da borda de baixo (10, 11 e 12 da linha 10); peça de 2 tiles
+  // entra primeiro, ocupando 10 e 11, e a próxima peça de 1 tile cai em 12
+  const decoX = [10, 11, 12];
+  let slot = 0;
+  for (const kind of biome.props) {
+    if (slot >= decoX.length) break;
+    const w = FURNITURE[kind].footprint.w;
+    if (w === 2) {
+      if (slot !== 0) continue;
+      furn(kind, 10, 10, undefined, { order: 0.3 });
+      slot = 2;
+      continue;
+    }
+    furn(kind, decoX[slot], 10, undefined, { order: 0.3 + slot * 0.01 });
+    slot++;
+  }
 
   // ---- canto do tesouro (baú e jaula trocam de lado conforme a semente)
   if (v.chestEast) {

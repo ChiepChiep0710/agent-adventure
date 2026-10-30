@@ -43,6 +43,14 @@ do meio (0.**3**.0).
   sala de armas, o corredor vira galeria de tochas e o entorno vira rocha escura. As mesas de guerra ficam **atrás**
   dos bancos (nada é desenhado na frente de quem duela), o poço de areia é mais largo e a tralha (armaria, baú, jaula,
   braseiros) foi para as bordas, longe do centro — dá para ver a luta. O escritório (skin padrão) segue igual.
+- **Sete biomas de masmorra.** Cada câmara nasce num clima sorteado pela semente: **tumba de arenito**,
+  **cripta de ossos**, **forja vulcânica**, **caverna de gelo**, **gruta de musgo**, **caverna de cristal** e
+  **cisterna alagada** — cada um com o seu piso, o seu poço (areia, ossos, cinza, gelo, musgo, água), a sua
+  parede (alvenaria, rocha natural, gelo, tijolo de forja) e o seu cenário (sarcófago, pilha de ossos,
+  cogumelos luminosos, cristais, estalagmites, poça de lava, teias). O **formato do poço** também varia
+  (quadrado, octogonal, cruz, pontas recortadas) e a mesma matéria veste a recepção, os banheiros, a sala de
+  armas e o corredor, então o nível inteiro fica diferente de projeto para projeto. O contrato da sala não
+  muda: mesmo lote, mesma porta, 6 lugares de trabalho e o miolo do poço sempre livre para o duelo.
 - **Nomes escolhidos para os agentes do Hermes** (`hermes-names.json`). Dois campos opcionais na pasta de dados do
   Habblaud: **`pool`** (estoque de nomes: cada agente novo, principal ou subagente, recebe um nome sorteado entre os
   ainda livres; esgotado, volta ao sorteio) e **`names`** (nome fixo por session id, que ganha do estoque). O arquivo é relido

@@ -178,6 +178,21 @@ function build(kind: FurnitureKind, variant: string | undefined, state: number, 
       return W.clock();
     case 'banner':
       return W.poster('code');
+    // Props dos biomas da masmorra: no escritório (skin padrão) caem no móvel mais próximo.
+    case 'sarcophagus':
+      return O.meetingTable(seed);
+    case 'bone_pile':
+      return O.trashBin();
+    case 'mushroom_cluster':
+      return O.plantSmall(variant, seed);
+    case 'crystal_shard':
+      return O.plantSmall('crystal', seed);
+    case 'ice_spike':
+      return O.plantSmall('ice', seed);
+    case 'lava_pool':
+      return O.meetingTable(seed);
+    case 'web_wall':
+      return W.poster('code');
   }
 }
 

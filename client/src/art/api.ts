@@ -222,7 +222,15 @@ export type FurnitureKind =
   | 'portcullis' // 2 tiles. Grade levadiça de ferro da masmorra (portão da câmara).
   | 'chain' // 1 tile. Corrente pendurada com argola e gancho.
   | 'wall_torch' // 1 tile. Archote de parede aceso. rects.glow = chama.
-  | 'banner'; // 1 tile. Estandarte da casa (variant = cor do acento do tema).
+  | 'banner' // 1 tile. Estandarte da casa (variant = cor do acento do tema).
+  // --- biomas da masmorra (cada câmara tem um clima: cripta, forja, caverna de gelo, gruta de musgo...)
+  | 'sarcophagus' // 2x1 sarcófago de pedra com tampa esculpida (cripta/tumba).
+  | 'bone_pile' // 1x1 pilha de ossos e caveira (cripta, covil).
+  | 'mushroom_cluster' // 1x1 moita de cogumelos luminosos (gruta de musgo).
+  | 'crystal_shard' // 1x1 aglomerado de cristais brilhantes (caverna de cristal). rects.glow = brilho.
+  | 'ice_spike' // 1x1 estalagmite de gelo (caverna de gelo).
+  | 'lava_pool' // 2x1 poça de lava com crosta de pedra (forja vulcânica). rects.glow = brilho.
+  | 'web_wall'; // 1 tile (parede). Teia de aranha grande (covil de aranhas, cripta abandonada).
 
 export interface FurnitureDef {
   mount: 'floor' | 'wall';
@@ -324,6 +332,14 @@ export const FURNITURE: Readonly<Record<FurnitureKind, FurnitureDef>> = {
   chain: { mount: 'wall', footprint: { w: 1, h: 0 }, blocks: false },
   wall_torch: { mount: 'wall', footprint: { w: 1, h: 0 }, blocks: false },
   banner: { mount: 'wall', footprint: { w: 1, h: 0 }, blocks: false, variants: ['red', 'blue', 'green', 'gold', 'violet', 'teal'] },
+  // --- biomas da masmorra
+  sarcophagus: { mount: 'floor', footprint: { w: 2, h: 1 }, blocks: true },
+  bone_pile: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
+  mushroom_cluster: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
+  crystal_shard: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
+  ice_spike: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
+  lava_pool: { mount: 'floor', footprint: { w: 2, h: 1 }, blocks: true },
+  web_wall: { mount: 'wall', footprint: { w: 1, h: 0 }, blocks: false },
 };
 
 export type FloorKind =
@@ -337,7 +353,13 @@ export type FloorKind =
   | 'sidewalk' // calçada externa
   | 'street' // rua externa (faixas desenhadas pelo render se quiser)
   | 'sand' // (aditivo) areia batida da arena da masmorra (fantasia); no escritório cai num tom neutro
-  | 'rock'; // (aditivo) chão de rocha escura do entorno da masmorra
+  | 'rock' // (aditivo) chão de rocha escura do entorno da masmorra
+  // (aditivos) biomas da masmorra — só a skin de fantasia usa; no escritório caem no piso padrão
+  | 'ash' // cinza vulcânica com brasas apagadas (forja)
+  | 'ice' // gelo rachado, azul-esbranquiçado (caverna de gelo)
+  | 'water' // água escura e parada com ondulações (cisterna inundada)
+  | 'moss' // terra úmida coberta de musgo (gruta)
+  | 'bone'; // cascalho de ossos moídos e pó de cripta
 
 export type WallPattern =
   | 'plain'
@@ -352,7 +374,11 @@ export type WallPattern =
   | 'treeline'
   | 'hedge'
   // Skin de fantasia (masmorra): blocos irregulares de pedra escura, com musgo nas juntas e rachaduras.
-  | 'dungeon';
+  | 'dungeon'
+  // (aditivos) biomas da masmorra: rocha natural sem argamassa, gelo e tijolo de forja com veios de lava
+  | 'cave'
+  | 'ice'
+  | 'forge';
 
 export interface WallStyle {
   /** Cor base da face da parede. */

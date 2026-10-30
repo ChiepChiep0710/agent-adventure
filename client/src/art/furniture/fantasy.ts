@@ -2723,6 +2723,414 @@ export function banner(variant: string | undefined): BufFurniture {
   return { base: s };
 }
 
+// ------------------------------------------------------------------ biomas da masmorra
+
+/** Marfim velho dos ossos (cripta, covil). */
+const BONE = { hi: '#f3edde', base: '#d8d0ba', dk: '#aaa189', dd: '#7c7461' } as const;
+
+/** Tons de osso: claro (os de cima) e gasto (os do fundo do monte). */
+const BONE_LIT = { hi: BONE.hi, base: BONE.base, dk: BONE.dk } as const;
+const BONE_OLD = { hi: BONE.dk, base: BONE.dk, dk: BONE.dd } as const;
+
+/** Osso comprido: haste de 2px com nós arredondados nas duas pontas. */
+function longBone(
+  b: PixelBuf,
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+  m: { hi: string; base: string; dk: string } = BONE_LIT,
+): void {
+  b.line(x0, y0, x1, y1, m.base, 2);
+  for (const [kx, ky] of [[x0, y0], [x1, y1]] as const) {
+    b.rect(kx - 1, ky - 1, 3, 3, m.base);
+    b.set(kx - 1, ky - 1, m.hi);
+    b.set(kx + 1, ky + 1, m.dk);
+  }
+}
+
+/** Pilha de ossos 1x1: fêmures cruzados, costelas e uma caveira no alto do monte. */
+export function bonePile(seed: number): BufFurniture {
+  const s = floorSheet(1, 1, 14);
+  const b = s.buf;
+  const r = rngOf(seed, 79);
+  b.ellipse(8, 15, 6.6, 2, 'rgba(20,17,15,0.34)');
+  // Fundo do monte: ossos velhos, mais apagados.
+  longBone(b, 2, 13, 11, 12, BONE_OLD);
+  longBone(b, 1, 10, 9, 14, BONE_OLD);
+  longBone(b, 4, 9, 12, 13, BONE_OLD);
+  // Ossos de cima, claros e cruzados.
+  longBone(b, 2, 12, 11, 8);
+  longBone(b, 5, 14, 13, 11);
+  // Costelas curvas saindo do monte.
+  for (let i = 0; i < 3; i++) {
+    const x = 2 + i * 4;
+    b.line(x, 12, x + 2, 9, BONE.dk);
+    b.set(x + 2, 9, BONE.base);
+    b.set(x + 3, 10, BONE.dd);
+  }
+  // Fragmentos de osso na poeira.
+  for (let i = 0; i < 4; i++) b.set(1 + Math.floor(r() * 14), 13 + Math.floor(r() * 2), i % 2 ? BONE.dk : BONE.dd);
+  // Sombra sob a mandíbula: separa a caveira do monte.
+  b.hline(5, 11, 9, 'rgba(22,18,16,0.55)');
+  // Caveira virada para a câmera, no topo do monte.
+  b.rect(5, 2, 7, 5, '#ded7c4');
+  b.hline(5, 11, 2, '#f1ebd9');
+  b.vline(5, 2, 6, '#ece5d2');
+  b.vline(11, 2, 6, '#b3aa93');
+  b.rect(6, 4, 2, 2, '#241f1b');
+  b.rect(9, 4, 2, 2, '#241f1b');
+  b.set(8, 5, '#241f1b');
+  b.set(7, 3, '#f7f2e4');
+  b.rect(6, 7, 5, 2, '#d8d0ba');
+  b.hline(6, 10, 7, '#e8e1cf');
+  for (const x of [7, 9]) b.vline(x, 7, 8, '#8f8774');
+  b.hline(6, 10, 8, '#a89f88');
+  b.outline();
+  contact(b, 1, 13, 14, 3, 0.22);
+  return { base: s };
+}
+
+/**
+ * Sarcófago 2x1: caixão de pedra lavrada em 3/4 — tampa em perspectiva, deslocada para a ponta e
+ * erguida na cabeceira (vão escuro à mostra), painel entalhado com caveira em relevo e pó.
+ */
+export function sarcophagus(seed: number): BufFurniture {
+  const s = floorSheet(2, 1, 14);
+  const b = s.buf;
+  const st = F.stone;
+  const face = ramp('#6f6b61', 0.06); // pedra da caixa, mais escura que a tampa
+  const r = rngOf(seed, 103);
+  const LX = 2;
+  const RX = 29;
+  b.ellipse(16, 15.4, 15, 2, 'rgba(18,16,14,0.34)');
+  // Caixa: face frontal escura, com aresta de topo iluminada e quina direita na sombra.
+  b.rect(LX, 3, RX - LX + 1, 9, face.base);
+  b.hline(LX, RX, 3, face.lt);
+  b.vline(LX, 3, 11, face.lt);
+  b.vline(RX, 3, 11, face.dd);
+  b.hline(LX, RX, 11, face.dd);
+  // Painel escavado com moldura e caveira em baixo-relevo claro.
+  b.rect(5, 4, 22, 7, face.dd);
+  b.hline(5, 26, 4, '#514d45');
+  b.rect(6, 5, 20, 5, '#5b574d');
+  // Crânio 9px: topo estreito, órbitas fundas, narinas e mandíbula com dentes.
+  b.rect(13, 4, 5, 1, st.lt);
+  b.rect(12, 5, 7, 1, st.lt);
+  b.rect(11, 6, 9, 2, st.lt);
+  b.hline(11, 19, 6, st.hi);
+  b.rect(12, 6, 2, 2, '#2f2b25');
+  b.rect(17, 6, 2, 2, '#2f2b25');
+  b.set(15, 7, '#2f2b25');
+  b.rect(12, 8, 7, 2, st.base);
+  b.hline(12, 18, 8, st.lt);
+  for (const x of [13, 15, 17]) b.set(x, 8, '#3a362f');
+  b.hline(12, 18, 9, '#3a362f');
+  // Plinto mais largo que a caixa: degrau na silhueta (lê como caixão, não como viga).
+  b.rect(LX - 1, 12, RX - LX + 3, 2, face.dk);
+  b.hline(LX - 1, RX + 1, 12, face.base);
+  b.hline(LX - 1, RX + 1, 13, face.dd);
+  // Tampa: laje inclinada (~3px em 28) — cabeceira erguida, ponta apoiada — e deslocada à direita.
+  const tilt = (x: number) => Math.round(((x - 3) / 28) * 3);
+  for (let x = 3; x <= 31; x++) {
+    const dy = tilt(x);
+    b.vline(x, -8 + dy, -1 + dy, x < 18 ? st.lt : st.base);
+    b.set(x, -8 + dy, st.hi);
+    b.set(x, -7 + dy, st.hi);
+    b.set(x, -2 + dy, st.base);
+    b.set(x, -1 + dy, st.dk);
+  }
+  // Vão escuro entre a tampa erguida e a boca da caixa (some na ponta, onde ela assenta).
+  for (let x = 3; x <= 31; x++) {
+    const bot = -1 + tilt(x);
+    if (bot + 1 <= 2) b.vline(x, bot + 1, 2, '#1b1712');
+  }
+  // Faixa entalhada a meio da tampa, com runas quase apagadas.
+  for (let x = 5; x <= 29; x++) {
+    const dy = tilt(x);
+    b.set(x, -5 + dy, st.base);
+    b.set(x, -4 + dy, st.base);
+  }
+  for (const gx of [9, 14, 19, 24] as const) {
+    const dy = tilt(gx);
+    b.set(gx, -5 + dy, st.dk);
+    b.set(gx + 1, -4 + dy, st.dk);
+  }
+  b.set(20, -5 + tilt(20), 'rgba(127,224,208,0.5)');
+  // Pó assentado sobre a tampa e no plinto.
+  for (let i = 0; i < 8; i++) {
+    b.set(4 + Math.floor(r() * 27), -6 + tilt(4) + Math.floor(r() * 4), i % 3 ? 'rgba(214,210,196,0.45)' : 'rgba(214,210,196,0.65)');
+  }
+  b.outline();
+  contact(b, 1, 13, 30, 3, 0.24);
+  return { base: s };
+}
+
+/** Chapéu e cores dos cogumelos luminosos da gruta. */
+const MUSH = { hi: '#cbfff4', lt: '#63c9bb', base: '#3fa79b', dk: '#1d6a68', gill: '#123f3f', spore: '#7fe0d0' } as const;
+
+/** Chapéu de cogumelo: silhueta escura, domo aceso, luz no alto e lamínulas na aba. */
+function capDome(b: PixelBuf, cx: number, top: number, rx: number, ry: number): void {
+  // Borda escura: dá a silhueta do chapéu contra a penumbra.
+  for (let i = 0; i <= ry; i++) {
+    const half = Math.max(1, Math.round(rx * Math.sqrt((i + 1) / (ry + 1))));
+    b.hline(Math.round(cx - half), Math.round(cx + half) - 1, top + i, MUSH.dk);
+  }
+  // Miolo do chapéu, 1px por dentro da borda.
+  for (let i = 1; i <= ry; i++) {
+    const half = Math.max(0, Math.round(rx * Math.sqrt((i + 1) / (ry + 1))) - 1);
+    if (half < 1) continue;
+    b.hline(Math.round(cx - half), Math.round(cx + half) - 1, top + i, MUSH.base);
+  }
+  const w = Math.round(rx);
+  // Luz de cima/esquerda e pintas luminosas.
+  b.hline(Math.round(cx) - w + 2, Math.round(cx) + w - 3, top + 1, MUSH.lt);
+  b.set(Math.round(cx) + Math.max(1, w - 2), top + Math.max(1, ry - 1), MUSH.hi);
+  // Lamínulas sob a aba.
+  b.hline(Math.round(cx) - w + 2, Math.round(cx) + w - 2, top + ry + 1, MUSH.gill);
+}
+
+/** Cogumelo: caule escuro e chapéu luminoso. (cx, foot) = centro da base. */
+function glowMushroom(b: PixelBuf, cx: number, foot: number, rx: number, h: number): void {
+  const top = foot - h;
+  const x0 = Math.round(cx) - 1;
+  b.rect(x0, top + 3, 2, Math.max(1, foot - top - 3), '#46554d');
+  b.vline(x0, top + 3, foot - 1, '#5f7168');
+  b.vline(x0 + 1, top + 3, foot - 1, '#26302c');
+  b.set(x0, foot - 1, '#1d2522');
+  capDome(b, cx, top, rx, Math.max(1, Math.round(rx * 0.55)));
+}
+
+/** Moita de cogumelos 1x1: quatro chapéus ciano acesos sobre caules escuros. */
+export function mushroomCluster(seed: number): BufFurniture {
+  const s = floorSheet(1, 1, 14);
+  const b = s.buf;
+  const r = rngOf(seed, 83);
+  b.ellipse(8, 15, 6.4, 2, 'rgba(16,26,24,0.34)');
+  b.ellipse(8, 13.6, 6.6, 2.4, 'rgba(90,210,196,0.1)');
+  glowMushroom(b, 4.5, 15, 3.6, 11);
+  glowMushroom(b, 12, 15, 2.6, 6);
+  glowMushroom(b, 2, 14, 1.8, 4);
+  glowMushroom(b, 13.5, 15, 1.8, 3);
+  // Esporos suspensos na penumbra.
+  for (let i = 0; i < 6; i++) b.set(1 + Math.floor(r() * 14), Math.floor(r() * 9), 'rgba(127,224,208,0.55)');
+  b.outline();
+  s.rects = { glow: rectAt(s, 0, 0, 16, 14) };
+  return { base: s };
+}
+
+/** Matizes das facetas (luz à esquerda, sombra à direita). */
+interface FacetMat {
+  hi: string;
+  lt: string;
+  base: string;
+  dk: string;
+}
+
+const CRYSTALS: Readonly<Record<'violet' | 'cyan' | 'pale', FacetMat>> = {
+  violet: { hi: '#ece0ff', lt: '#bda6f8', base: '#7f61d8', dk: '#4a3591' },
+  cyan: { hi: '#e2fbff', lt: '#9fe8f2', base: '#49b6cd', dk: '#276f83' },
+  pale: { hi: '#f4eaff', lt: '#d3c0ff', base: '#9b7fe6', dk: '#5b459c' },
+};
+
+/** Prisma de cristal: três facetas verticais e ponta luminosa. (cx, foot) = base. */
+function facetPillar(b: PixelBuf, cx: number, foot: number, h: number, hw: number, m: FacetMat): void {
+  for (let i = 0; i < h; i++) {
+    const t = i / Math.max(1, h - 1);
+    const half = Math.max(0, Math.round(hw * Math.pow(1 - t, 0.8)));
+    const y = foot - i;
+    b.hline(cx - half, cx + half, y, m.base);
+    if (half < 1) {
+      b.set(cx, y, m.hi);
+      continue;
+    }
+    b.set(cx - half, y, m.lt);
+    b.set(cx + half, y, m.dk);
+    b.set(cx, y, m.hi);
+  }
+}
+
+/** Aglomerado de cristais 1x1: quatro prismas violeta/ciano sobre uma rocha escura. */
+export function crystalShard(seed: number): BufFurniture {
+  const s = floorSheet(1, 1, 10);
+  const b = s.buf;
+  const r = rngOf(seed, 89);
+  b.ellipse(8, 15, 6.6, 2, 'rgba(18,14,26,0.34)');
+  // Rocha de base lascada.
+  b.ellipse(8, 14, 6.2, 2.4, '#3a3348');
+  b.hline(4, 11, 12, '#4a4258');
+  b.set(3, 14, '#2d2738');
+  b.set(12, 15, '#2d2738');
+  facetPillar(b, 7, 14, 16, 3, CRYSTALS.violet);
+  facetPillar(b, 12, 14, 11, 2, CRYSTALS.cyan);
+  facetPillar(b, 3, 15, 8, 2, CRYSTALS.pale);
+  facetPillar(b, 10, 15, 5, 1, CRYSTALS.cyan);
+  // Faíscas de luz ao redor do aglomerado.
+  for (let i = 0; i < 6; i++) b.set(1 + Math.floor(r() * 14), Math.floor(r() * 8), 'rgba(198,222,255,0.55)');
+  b.outline();
+  s.rects = { glow: rectAt(s, 1, 0, 14, 15) };
+  return { base: s };
+}
+
+/** Gelo azulado da caverna fria. */
+const ICE = { hi: '#f4fcff', lt: '#dcf4ff', base: '#8fc8e6', mid: '#5f9ec6', dk: '#3c6f96' } as const;
+
+/** Estalagmite de gelo: aresta viva à esquerda, núcleo translúcido e lascas brancas. */
+function icePillar(b: PixelBuf, cx: number, foot: number, h: number, hw: number, lean = 0): void {
+  for (let i = 0; i < h; i++) {
+    const t = i / Math.max(1, h - 1);
+    const half = Math.max(0, Math.round(hw * Math.pow(1 - t, 0.72)));
+    const x = cx + Math.round(t * lean);
+    const y = foot - i;
+    b.hline(x - half, x + half, y, ICE.base);
+    if (half < 1) {
+      b.set(x, y, ICE.hi);
+      continue;
+    }
+    b.set(x - half, y, ICE.hi);
+    b.set(x + half, y, ICE.dk);
+    b.set(x, y, ICE.lt);
+    if (i % 3 === 1 && half >= 2) b.set(x - 1, y, '#ffffff');
+  }
+}
+
+/** Espigões de gelo 1x1: três estalagmites translúcidas sobre gelo rachado. */
+export function iceSpike(seed: number): BufFurniture {
+  const s = floorSheet(1, 1, 12);
+  const b = s.buf;
+  const r = rngOf(seed, 91);
+  b.ellipse(8, 15, 6.8, 1.8, 'rgba(18,26,34,0.28)');
+  // Laje de gelo com rachaduras.
+  b.ellipse(8, 14.6, 5.8, 2, '#a4d2e8');
+  b.hline(4, 11, 13, '#ccecf8');
+  b.line(3, 14, 7, 15, ICE.mid);
+  b.line(10, 14, 13, 15, ICE.mid);
+  b.set(6, 14, ICE.hi);
+  icePillar(b, 7, 14, 16, 2.6);
+  icePillar(b, 12, 15, 11, 2, 1);
+  icePillar(b, 3, 15, 8, 2, -1);
+  icePillar(b, 10, 15, 4, 1);
+  // Névoa fria colada nas estalagmites (posições fixas, só o tom varia com a seed).
+  const mist = ['rgba(214,242,255,0.4)', 'rgba(214,242,255,0.5)'][Math.floor(r() * 2)];
+  for (const [x, y] of [[2, 6], [14, 5], [5, 1]] as const) b.set(x, y, mist);
+  b.outline();
+  contact(b, 2, 14, 12, 2, 0.2);
+  return { base: s };
+}
+
+/** Poça de lava 2x1: crosta de pedra rachada em volta do metal fundido, com bolhas. */
+export function lavaPool(seed: number): BufFurniture {
+  const s = floorSheet(2, 1, 6);
+  const b = s.buf;
+  const r = rngOf(seed, 97);
+  b.ellipse(16, 14.8, 15, 2, 'rgba(18,12,8,0.34)');
+  // Crosta de pedra em volta (anel escuro) e aresta iluminada no arco de cima.
+  b.ellipse(16, 8, 14.8, 6.4, '#3a2a20');
+  b.ellipse(16, 8.2, 13.6, 5.6, '#4b382b');
+  for (let a = Math.PI; a <= Math.PI * 2; a += 0.1) {
+    b.set(Math.round(16 + Math.cos(a) * 14.1), Math.round(8 + Math.sin(a) * 6), '#57422f');
+  }
+  // Rachaduras na crosta, com brasa no fundo de cada uma.
+  const cracks: readonly [number, number, number, number][] = [
+    [2, 5, 7, 3],
+    [25, 3, 29, 6],
+    [3, 12, 8, 11],
+    [23, 12, 28, 10],
+  ];
+  for (const [x0, y0, x1, y1] of cracks) {
+    b.line(x0, y0, x1, y1, '#1d120c');
+    b.set(x0, y0, '#d1541a');
+  }
+  // Poça: borda em brasa, miolo amarelo e núcleo branco-quente.
+  b.ellipse(16, 8.4, 11.4, 4.6, '#2a1a12');
+  b.ellipse(16, 8.6, 10.2, 3.9, '#a8300d');
+  b.ellipse(15.8, 8.2, 8.2, 3, '#dd5c19');
+  b.ellipse(15.4, 7.8, 5.6, 2.1, '#f79a2a');
+  b.ellipse(15, 7.4, 3.2, 1.2, '#ffd45c');
+  b.set(15, 7, '#fff3b4');
+  // Bolhas que estouram na superfície.
+  for (let i = 0; i < 4; i++) {
+    const a = r() * Math.PI * 2;
+    const d = 0.25 + r() * 0.6;
+    const bx = Math.round(16 + Math.cos(a) * 9.4 * d);
+    const by = Math.round(8 + Math.sin(a) * 3.4 * d);
+    b.ellipse(bx, by, 1.5, 1, '#ffd45c');
+    b.set(bx, by, '#b83a10');
+  }
+  // Fagulhas subindo da superfície.
+  for (const [fx, fy] of [[10, 1], [16, 0], [21, 1]] as const) b.set(fx, fy, 'rgba(255,168,72,0.55)');
+  b.outline();
+  contact(b, 2, 12, 28, 3, 0.28);
+  s.rects = { glow: rectAt(s, 2, 1, 28, 13) };
+  return { base: s };
+}
+
+/** Teia de parede 1 tile: raios ancorados nas quinas e bordas, três anéis e uma aranha. */
+export function webWall(seed: number): BufFurniture {
+  const s = wallSheet(1);
+  const b = s.buf;
+  const r = rngOf(seed, 101);
+  // Fios finos: alfa < 160 para o contorno automático não engordar a teia.
+  const silk = 'rgba(232,240,252,0.6)';
+  const silkDim = 'rgba(212,224,242,0.42)';
+  const knot = 'rgba(246,250,255,0.85)';
+  const cx = 8;
+  const cy = -16;
+  // Pontas em ordem angular: quinas, topo/baixo e meias-laterais.
+  const tips: readonly [number, number][] = [
+    [2, -29],
+    [7, -31],
+    [13, -29],
+    [14, -20],
+    [13, -6],
+    [8, -3],
+    [2, -6],
+    [1, -20],
+  ];
+  const strand = (x0: number, y0: number, x1: number, y1: number, c: string): void => {
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0));
+    for (let i = 0; i <= n; i++) {
+      const t = n ? i / n : 0;
+      b.set(Math.round(x0 + (x1 - x0) * t), Math.round(y0 + (y1 - y0) * t), c);
+    }
+  };
+  // Anéis primeiro (mais apagados): curvas que caem um pouco entre dois raios.
+  for (const f of [0.38, 0.66, 0.9]) {
+    for (let i = 0; i < tips.length; i++) {
+      const [ax, ay] = tips[i];
+      const [bx, by] = tips[(i + 1) % tips.length];
+      const p0: [number, number] = [cx + (ax - cx) * f, cy + (ay - cy) * f];
+      const p1: [number, number] = [cx + (bx - cx) * f, cy + (by - cy) * f];
+      const sag: [number, number] = [cx + ((p0[0] + p1[0]) / 2 - cx) * 0.86, cy + ((p0[1] + p1[1]) / 2 - cy) * 0.86];
+      for (let k = 0; k <= 12; k++) {
+        const t = k / 12;
+        const u = 1 - t;
+        const x = u * u * p0[0] + 2 * u * t * sag[0] + t * t * p1[0];
+        const y = u * u * p0[1] + 2 * u * t * sag[1] + t * t * p1[1];
+        b.set(Math.round(x), Math.round(y), silkDim);
+      }
+    }
+  }
+  // Raios por cima dos anéis: é o que faz a leitura de teia.
+  for (const [tx, ty] of tips) strand(cx, cy, tx, ty, silk);
+  // Nós onde a teia se prende nas quinas.
+  for (const [tx, ty] of [[2, -29], [13, -29], [2, -6], [13, -6]] as const) b.set(tx, ty, knot);
+  // Aranha (corpo escuro opaco => ganha contorno): fio, pernas curtas e cabeça com olhos.
+  strand(cx, cy, 11, -11, silk);
+  for (const [ex, ey] of [[9, -12], [8, -10], [9, -8], [10, -7], [13, -12], [14, -10], [13, -8], [12, -7]] as const) {
+    b.line(11, -10, ex, ey, '#3a3342');
+  }
+  b.ellipse(10.6, -11, 2, 1.8, '#241f2b');
+  b.set(10, -12, '#3d3549');
+  b.rect(10, -9, 2, 2, '#1d1924');
+  b.set(10, -8, '#c4544a');
+  b.set(12, -8, '#c4544a');
+  // Fio rompido que pende da teia (o comprimento varia com a seed).
+  strand(4, -13, 4, -13 + 3 + Math.floor(r() * 4), silkDim);
+  b.outline();
+  return { base: s };
+}
+
 /** Móvel de fantasia do kind, ou undefined quando o kind não tem versão de fantasia. */
 export function fantasyBuild(kind: FurnitureKind, variant: string | undefined, state: number, seed: number): BufFurniture | undefined {
   switch (kind) {
@@ -2868,6 +3276,21 @@ export function fantasyBuild(kind: FurnitureKind, variant: string | undefined, s
       return wallTorch();
     case 'banner':
       return banner(variant);
+    // --- biomas da masmorra
+    case 'sarcophagus':
+      return sarcophagus(seed);
+    case 'bone_pile':
+      return bonePile(seed);
+    case 'mushroom_cluster':
+      return mushroomCluster(seed);
+    case 'crystal_shard':
+      return crystalShard(seed);
+    case 'ice_spike':
+      return iceSpike(seed);
+    case 'lava_pool':
+      return lavaPool(seed);
+    case 'web_wall':
+      return webWall(seed);
     default:
       return undefined;
   }

@@ -3,6 +3,7 @@ import type { WallStyle } from '../../art/api';
 import { isFantasy } from '../../art/skin';
 import { COL_W, NORTH_Y, ROOM_H, SOUTH_Y, TILE } from '../constants';
 import { AreaBuilder, SEATED_SORT_BIAS } from './builder';
+import { biomeWall, dungeonBiome } from './dungeon-biome';
 import type { AreaLayout } from './types';
 
 export const RECEPTION_ID = 'core:recepcao';
@@ -24,8 +25,6 @@ export const CORE_WALLS = {
  * Núcleo na skin de fantasia: o prédio é um complexo de masmorra — salões de pedra escura,
  * tochas, estandartes e portões de ferro no lugar das paredes claras e das divisórias de vidro.
  */
-const FAN_PEDRA: WallStyle = { base: '#4c4842', trim: '#262420', pattern: 'dungeon' };
-const FAN_PEDRA_ESCURA: WallStyle = { base: '#3f3c37', trim: '#211f1c', pattern: 'dungeon' };
 /** Taverna subterrânea: enxaimel (reboco e vigas) atrás da bancada, para aquecer a câmara. */
 const FAN_TAVERNA: WallStyle = { base: '#6b4a32', trim: '#3a2a1e', pattern: 'wood_panel' };
 
@@ -35,11 +34,12 @@ export const ELEVATOR_CX = [3, 6.5] as const;
 export function layoutReception(): AreaLayout {
   const b = new AreaBuilder(RECEPTION_ID, 'reception', { x: 0, y: NORTH_Y, w: COL_W, h: ROOM_H });
   const fan = isFantasy();
-  const wall = fan ? FAN_PEDRA : CORE_WALLS.reception;
-  // fantasia: salão de entrada da masmorra — lajes de pedra e calçamento na passagem da porta
+  const biome = dungeonBiome(101, 2);
+  const wall = fan ? biomeWall(biome, 0.05) : CORE_WALLS.reception;
+  // fantasia: salão de entrada da masmorra — piso e pedra do bioma, calçamento na passagem da porta
   // (os elevadores continuam sendo a "fachada" por onde todos chegam e vão embora)
-  b.floor('marble', 0, 0, 16, 12, 101);
-  if (fan) b.floor('concrete', 7, 5, 2, 6, 104);
+  b.floor(fan ? biome.hall : 'marble', 0, 0, 16, 12, 101);
+  if (fan) b.floor(biome.ring, 7, 5, 2, 6, 104);
   b.rug(1.5, 2.2, 6.5, 2.6, '#3d5a80', 102);
   b.rug(8.6, 6.4, 5.2, 3.2, '#b65f3a', 103);
   b.face(0.5, 15, wall);
@@ -95,18 +95,20 @@ export function layoutReception(): AreaLayout {
 export function layoutRestroom(): AreaLayout {
   const b = new AreaBuilder(RESTROOM_ID, 'restroom', { x: 0, y: SOUTH_Y, w: COL_W, h: ROOM_H });
   const fan = isFantasy();
-  const wall = fan ? FAN_PEDRA : CORE_WALLS.restroom;
-  // fantasia: câmara do poço de banho — ardósia no chão e pedra nas paredes
-  b.floor('tile_white', 0, 0, 16, 12, 201);
+  const biome = dungeonBiome(201, 2);
+  const wall = fan ? biomeWall(biome, 0.1) : CORE_WALLS.restroom;
+  // fantasia: câmara do poço de banho — piso do bioma e pedra nas paredes
+  b.floor(fan ? biome.hall : 'tile_white', 0, 0, 16, 12, 201);
   // passagem de calçamento da porta (norte, x 7-8) até as tinas
   if (fan) b.floor('concrete', 7, 2, 2, 4, 203);
   // tapetinho só na frente das pias (nada de tapete grande no banheiro)
   b.rug(2, 3.15, 3, 0.85, '#6fa3b8', 202);
   b.face(0.5, 15, wall, [{ lx: 7, w: 2 }]);
   b.wall('door_frame', 8, undefined, { order: 0.05 });
-  b.south(0.5, 15, 11, { ...(fan ? FAN_PEDRA_ESCURA : wall), exterior: true });
-  b.cap(0, 0, 0.5, 12, fan ? FAN_PEDRA_ESCURA : wall);
-  b.cap(15.5, 0, 0.5, 12, fan ? FAN_PEDRA_ESCURA : wall);
+  const dark = fan ? biomeWall(biome, 0.55) : wall;
+  b.south(0.5, 15, 11, { ...(fan ? dark : wall), exterior: true });
+  b.cap(0, 0, 0.5, 12, fan ? dark : wall);
+  b.cap(15.5, 0, 0.5, 12, fan ? dark : wall);
   b.walk(1, 2, 14, 9);
   b.walk(7, 0, 2, 2);
   b.area.door = { x: 7, y: SOUTH_Y, w: 2, h: 2 };
@@ -148,7 +150,8 @@ export function layoutRestroom(): AreaLayout {
 export function layoutCafe(): AreaLayout {
   const b = new AreaBuilder(CAFE_ID, 'cafe', { x: COL_W, y: NORTH_Y, w: COL_W, h: ROOM_H });
   const fan = isFantasy();
-  const wall = fan ? FAN_PEDRA : CORE_WALLS.cafe;
+  const biome = dungeonBiome(301, 2);
+  const wall = fan ? biomeWall(biome, 0.1) : CORE_WALLS.cafe;
   // fantasia: taverna subterrânea — tábuas velhas no chão e enxaimel atrás da bancada
   b.floor(fan ? 'wood' : 'tile_check', 0, 0, 16, 12, 301);
   if (fan) b.floor('concrete', 7, 9, 3, 2, 303);
@@ -230,19 +233,21 @@ export function layoutCafe(): AreaLayout {
 export function layoutLounge(): AreaLayout {
   const b = new AreaBuilder(LOUNGE_ID, 'lounge', { x: COL_W, y: SOUTH_Y, w: COL_W, h: ROOM_H });
   const fan = isFantasy();
-  const wall = fan ? FAN_PEDRA : CORE_WALLS.lounge;
-  // fantasia: sala de armas e treino da masmorra — lajes de pedra, manequins e armações
-  b.floor(fan ? 'marble' : 'wood', 0, 0, 16, 12, 401);
+  const biome = dungeonBiome(401, 2);
+  const wall = fan ? biomeWall(biome, 0.05) : CORE_WALLS.lounge;
+  // fantasia: sala de armas e treino da masmorra — piso do bioma, manequins e armações
+  b.floor(fan ? biome.hall : 'wood', 0, 0, 16, 12, 401);
   // passagem de calçamento da entrada larga (norte, x 7-9) para dentro da sala
-  if (fan) b.floor('concrete', 7, 2, 3, 3, 404);
+  if (fan) b.floor(biome.ring, 7, 2, 3, 3, 404);
   b.rug(1.5, 3.2, 7, 5.2, '#4f8a5b', 402);
   b.rug(9.2, 4.6, 5.6, 4.4, '#d7c8a8', 403);
   // parede com TV a oeste; vidro a leste; passagem larga no meio
   b.face(0.5, 6.5, wall);
-  b.face(10, 5.5, fan ? FAN_PEDRA_ESCURA : CORE_WALLS.glass);
-  b.south(0.5, 15, 11, { ...(fan ? FAN_PEDRA_ESCURA : wall), exterior: true });
-  b.cap(0, 0, 0.5, 12, fan ? FAN_PEDRA_ESCURA : wall);
-  b.cap(15.5, 0, 0.5, 12, fan ? FAN_PEDRA_ESCURA : wall);
+  const dark = fan ? biomeWall(biome, 0.55) : CORE_WALLS.glass;
+  b.face(10, 5.5, dark);
+  b.south(0.5, 15, 11, { ...(fan ? dark : wall), exterior: true });
+  b.cap(0, 0, 0.5, 12, fan ? dark : wall);
+  b.cap(15.5, 0, 0.5, 12, fan ? dark : wall);
   b.walk(1, 2, 14, 9);
   b.walk(7, 0, 3, 2);
   b.area.door = { x: COL_W + 7, y: SOUTH_Y, w: 3, h: 2 };

@@ -5,6 +5,7 @@ import type { FurnitureKind } from '../../art/api';
 import { isFantasy } from '../../art/skin';
 import { COL_W, CORE_COLS, CORRIDOR_H, CORRIDOR_Y } from '../constants';
 import { AreaBuilder } from './builder';
+import { dungeonBiome } from './dungeon-biome';
 import type { AreaLayout } from './types';
 
 export const CORRIDOR_ID = 'core:corredor';
@@ -18,8 +19,9 @@ export function layoutCorridor(cols: number): AreaLayout {
   const w = cols * COL_W;
   const b = new AreaBuilder(CORRIDOR_ID, 'corridor', { x: 0, y: CORRIDOR_Y, w, h: CORRIDOR_H });
   const fan = isFantasy();
-  // fantasia: corredor da masmorra — calçamento de pedra de ponta a ponta, sem grama
-  b.floor('concrete', 0, 0, w, CORRIDOR_H, 501);
+  // fantasia: corredor da masmorra — o calçamento segue o bioma (pedra, rocha, gelo, cinza...)
+  const biome = dungeonBiome(501, 3);
+  b.floor(fan ? biome.hall : 'concrete', 0, 0, w, CORRIDOR_H, 501);
   if (fan) {
     // braseiros de ferro nas duas pontas (os "portões" da masmorra)
     for (const ly of [0, CORRIDOR_H - 1]) {
@@ -37,8 +39,8 @@ export function layoutCorridor(cols: number): AreaLayout {
 
   // Na masmorra as plantas viram barris/caixotes de suprimento e os bancos viram bancos de pedra.
   const benchKind: FurnitureKind = fan ? 'bench_stone' : 'bench';
-  const tallKind: FurnitureKind = fan ? 'barrel' : 'plant_tall';
-  const smallKind: FurnitureKind = fan ? 'crate' : 'plant_small';
+  const tallKind: FurnitureKind = fan ? biome.props[0] : 'plant_tall';
+  const smallKind: FurnitureKind = fan ? biome.props[1 % biome.props.length] : 'plant_small';
   for (let c = 0; c < cols; c++) {
     const x = c * COL_W;
     const last = c === cols - 1;
