@@ -1,8 +1,10 @@
 // Despacho dos móveis por kind (puro). Cada combinação (kind, variant, state, variação) é gerada uma
 // vez e guardada em cache por quem chama (ver art/index.ts).
 import { FURNITURE, type FurnitureKind } from '../api';
+import { isFantasy } from '../skin';
 import { trim, type BufFurniture } from '../core/sprite';
 import * as C from './common';
+import { fantasyBuild } from './fantasy';
 import * as O from './office';
 import * as W from './wall';
 
@@ -128,9 +130,13 @@ function build(kind: FurnitureKind, variant: string | undefined, state: number, 
   }
 }
 
-/** Gera os sprites (em buffer) de um móvel, recortados ao conteúdo. */
+// A skin de fantasia troca o móvel por um objeto de RPG; kinds sem versão de fantasia caem no escritório.
 export function renderFurniture(kind: FurnitureKind, variant?: string, state?: number, seed?: number): BufFurniture {
   const n = normalizeFurniture(kind, variant, state, seed);
+  if (isFantasy()) {
+    const f = fantasyBuild(kind, n.variant, n.state, n.vseed);
+    if (f) return { base: trim(f.base), front: f.front ? trim(f.front) : undefined };
+  }
   const f = build(kind, n.variant, n.state, n.vseed);
   return { base: trim(f.base), front: f.front ? trim(f.front) : undefined };
 }

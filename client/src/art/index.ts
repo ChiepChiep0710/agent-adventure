@@ -138,7 +138,8 @@ export function avatarCanvas(seed: number, opts: { look?: 'f' | 'm'; sub?: boole
 export function furnitureSprites(kind: FurnitureKind, variant?: string, state?: number, opts: { seed?: number } = {}): FurnitureSprites {
   // Chave normalizada: sementes/variantes equivalentes compartilham o mesmo canvas.
   const n = normalizeFurniture(kind, variant, state, opts.seed);
-  const key = `${kind}|${n.variant ?? '-'}|${n.state}|${n.vseed}`;
+  // A pele entra na chave: o mesmo móvel tem sprites diferentes em fantasia e no escritório.
+  const key = `${isFantasy() ? 'fantasy' : 'office'}|${kind}|${n.variant ?? '-'}|${n.state}|${n.vseed}`;
   return furnCache.get(key, () => {
     const f = renderFurniture(kind, n.variant, n.state, n.vseed);
     return { base: toSprite(f.base), front: f.front ? toSprite(f.front) : undefined };

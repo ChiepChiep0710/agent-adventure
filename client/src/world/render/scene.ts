@@ -1,5 +1,6 @@
 // Representação visual das áreas: caches estáticos (piso, paredes, itens de parede fixos) e
 // listas de móveis/itens dinâmicos prontos para o desenho por frame.
+import { isFantasy } from '../../art/skin';
 import { FURNITURE, TILE, type ArtModule, type FurnitureKind, type FurnitureSprites, type Sprite } from '../../art/api';
 import { hash32 } from '../../../../shared/hash';
 import type { AreaLayout, WallItemPlacement, WallSegment } from '../layout/types';
@@ -253,7 +254,8 @@ export function buildAreaVis(art: ArtModule, layout: AreaLayout, room: RoomState
       continue;
     }
     // quadros e pôsteres: arte de IA pronta (quando houver) no lugar do procedural
-    const ai = it.kind === 'painting' || it.kind === 'poster' ? pickWallArt(assets, it.kind, it.kind === 'poster' ? 1 : it.variant === 'wide' ? 4 : 2, it.variant, vis.seed) : null;
+    // Na skin de fantasia os quadros/pôsteres viram tapeçarias/estandartes procedurais (sem arte de IA).
+    const ai = !isFantasy() && (it.kind === 'painting' || it.kind === 'poster') ? pickWallArt(assets, it.kind, it.kind === 'poster' ? 1 : it.variant === 'wide' ? 4 : 2, it.variant, vis.seed) : null;
     if (ai && vis.on === 'face' && drawWallArtAsset(wctx, vis, ai)) continue;
     const s = wallSprites(art, it.kind, it.variant === 'wide' ? undefined : it.variant, 0, vis.seed);
     if (!s) continue;

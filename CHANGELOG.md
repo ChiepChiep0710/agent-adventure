@@ -14,7 +14,10 @@ do meio (0.**3**.0).
 
 - **Skin de fantasia (RPG clássico).** `?skin=fantasy` (ou `rpg`) troca pisos, paredes, temas de sala e a paleta dos
   painéis por pedra, madeira velha e pergaminho com linhas douradas; `?skin=office` volta ao escritório, e a escolha
-  fica salva no navegador. O escritório continua sendo o padrão.
+  fica salva no navegador. O escritório continua sendo o padrão. Na mesma pele, os móveis viram objetos de RPG: mesas
+  de escriba com tomo aberto, vela e pena no lugar do monitor, cadeiras de espaldar alto, estantes com rolos, poções e
+  caveiras, baú, caldeirão borbulhando, barril, archotes, candelabro, mesa de guerra com mapa, quadro de missões,
+  tapeçarias e estandartes, espelho mágico, barril de cerveja, estante de poções e forno de pedra.
 - **Nomes escolhidos para os agentes do Hermes** (`hermes-names.json`). Dois campos opcionais na pasta de dados do
   Habblaud: **`pool`** (estoque de nomes: cada agente novo, principal ou subagente, recebe um nome sorteado entre os
   ainda livres; esgotado, volta ao sorteio) e **`names`** (nome fixo por session id, que ganha do estoque). O arquivo é relido
