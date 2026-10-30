@@ -1531,6 +1531,29 @@ function drawHood(dc: Dc, x: number, y: number, main: string, trim: string): voi
   b.hline(x + 2, x + 11, y + 15, trim);
 }
 
+// ---------------------------------------------------------------- trajes de classe (fantasia)
+
+/**
+ * Linhas de um chapéu/touca: `[deslocamento em colunas a partir de x, largura, cor]`, de cima para
+ * baixo. Chapéu é silhueta: são as linhas ACIMA da cabeça que dizem a classe de longe — inclusive
+ * sentado, quando o encosto da cadeira cobre o tronco.
+ */
+type HatRow = readonly [dx: number, w: number, c: string];
+
+/** Empilha as linhas de um chapéu a partir de (x, y0); cada linha desce 1 px. */
+function hatRows(b: PixelBuf, x: number, y0: number, rows: readonly HatRow[]): void {
+  for (let i = 0; i < rows.length; i++) b.rect(x + rows[i][0], y0 + i, rows[i][1], 1, rows[i][2]);
+}
+
+/** Brilho em cruz de 5 px (centro claro, braços coloridos): a "estrela" que marca a classe. */
+function sparkAt(b: PixelBuf, x: number, y: number, c: string, hi: string): void {
+  b.set(x, y, hi);
+  b.set(x - 1, y, c);
+  b.set(x + 1, y, c);
+  b.set(x, y - 1, c);
+  b.set(x, y + 1, c);
+}
+
 /** Usa o mesmo rig da cabeça para acompanhar quique, cochilo e poses sentadas. */
 function drawCostume(dc: Dc, costume: CharacterFrameRequest['costume']): void {
   if (!costume) return;
@@ -1560,55 +1583,137 @@ function drawCostume(dc: Dc, costume: CharacterFrameRequest['costume']): void {
     b.vline(x + 8, y + 1, y + 4, '#f9ae48');
     b.hline(x + 2, x + 11, y + 5, '#8d4930');
   } else if (costume === 'mage') {
-    // Mago: chapéu pontudo azul com estrela, manto azul-arroxeado e cinto dourado.
-    b.rect(x + 6, y - 2, 2, 2, '#3b4a9c');
-    b.rect(x + 5, y, 4, 2, '#4657b8');
-    b.rect(x + 2, y + 2, 9, 3, '#3b4a9c');
-    b.rect(x + 4, y + 2, 2, 2, '#5468cc');
-    b.hline(x + 2, x + 10, y + 4, '#e6c65c');
-    b.set(x + 8, y + 3, '#ffe98a');
-    b.rect(x - 1, y + 5, 15, 2, '#2c3470');
+    // Mago: chapéu pontudo roxo-azul bem alto (a ponta fica acima da cabeça, então aparece mesmo
+    // sentado de costas para uma cadeira de espaldar alto), estrela dourada na copa e cajado com
+    // gema ciano acesa ao lado do corpo.
+    hatRows(b, x, y - 2, [
+      [7, 2, '#2a3374'],
+      [6, 3, '#3b4a9c'],
+      [5, 5, '#4657b8'],
+      [4, 7, '#3b4a9c'],
+      [0, 14, '#c9a94a'],
+      [0, 14, '#1f2757'],
+    ]);
+    sparkAt(b, x + 7, y, '#e6c65c', '#fff3c4');
+    // Cajado: haste de madeira na altura do ombro até o quadril, gema brilhando na ponta.
+    b.vline(x + 15, y + 4, y + 16, '#6b4a2f');
+    b.set(x + 15, y + 9, '#8a6a3f');
+    b.set(x + 15, y + 13, '#8a6a3f');
+    b.set(x + 15, y + 1, '#d8f6ff');
+    b.set(x + 15, y + 2, '#7fe0e8');
+    b.rect(x + 14, y + 3, 3, 1, '#7fe0e8');
+    b.set(x + 15, y + 4, '#5ab6c9');
+    b.set(x + 13, y + 3, 'rgba(127,224,208,0.45)');
+    b.set(x + 17, y + 3, 'rgba(127,224,208,0.45)');
     dressTorso(dc, '#4a58b4', 0.62);
     for (let xx = box.x; xx < box.x + box.w; xx++) dressAt(dc, xx, box.y + 4, '#e6c65c');
   } else if (costume === 'knight') {
-    // Cavaleiro: elmo de aço com penacho vermelho, protetor de nariz, peitoral de placas e cinto.
-    b.rect(x + 2, y - 2, 8, 1, '#c3cddb');
-    b.rect(x + 1, y - 1, 12, 4, '#9fabbd');
-    b.rect(x + 7, y - 3, 2, 2, '#c9503f');
-    b.rect(x + 1, y + 3, 12, 2, '#7d899c');
-    b.rect(x + 1, y + 5, 2, 6, '#93a0b3');
-    b.rect(x + 11, y + 5, 2, 6, '#93a0b3');
-    b.vline(x + 7, y + 5, y + 9, '#b6c1cf');
+    // Cavaleiro: elmo de aço alto com penacho vermelho subindo acima da cabeça, fendas de viseira,
+    // protetor de nariz, guardas de bochecha e peitoral de placas com cinto.
+    hatRows(b, x, y - 2, [
+      [5, 4, '#c9503f'],
+      [4, 6, '#e0604c'],
+      [3, 8, '#b6c1cf'],
+      [2, 10, '#9fabbd'],
+      [1, 12, '#93a0b3'],
+      [0, 14, '#7d899c'],
+    ]);
+    b.set(x + 5, y + 1, '#f08a72');
+    b.set(x + 4, y, '#d9dee8');
+    for (const dx of [3, 4, 8, 9]) b.set(x + dx, y + 3, '#2a3040');
+    b.vline(x + 7, y + 4, y + 7, '#b6c1cf');
+    b.rect(x + 1, y + 4, 2, 5, '#93a0b3');
+    b.rect(x + 11, y + 4, 2, 5, '#93a0b3');
     dressTorso(dc, '#98a5b8', 0.6);
     for (let xx = box.x; xx < box.x + box.w; xx++) dressAt(dc, xx, box.y + 3, '#8a6a3f');
     dressAt(dc, box.x + 3, box.y + 1, '#d9dee8');
     dressAt(dc, box.x + 4, box.y + 1, '#d9dee8');
   } else if (costume === 'rogue') {
-    // Ladino: capuz escuro (rosto à mostra), manto escuro e alça de couro atravessada.
-    drawHood(dc, x, y, '#2f3543', '#3d4658');
-    dressTorso(dc, '#343b4c', 0.62);
+    // Ladino: capuz verde-escuro com ponta caída para a esquerda sobre o rosto emoldurado, manto
+    // escuro, alça de couro e adaga de aço com brilho ao lado do corpo.
+    drawHood(dc, x, y, '#2f4a34', '#4a6a4a');
+    hatRows(b, x, y - 2, [
+      [4, 2, '#20301f'],
+      [3, 3, '#2f4a34'],
+      [3, 5, '#35533a'],
+      [2, 8, '#2f4a34'],
+    ]);
+    b.set(x + 3, y - 2, '#5c7a56');
+    b.vline(x + 16, y + 6, y + 9, '#eef2f7');
+    b.set(x + 16, y + 6, '#ffffff');
+    b.set(x + 15, y + 7, '#ffffff');
+    b.hline(x + 15, x + 17, y + 10, '#c9a94a');
+    b.rect(x + 16, y + 11, 1, 3, '#4a3320');
+    dressTorso(dc, '#35533a', 0.62);
     for (let i = 0; i < 5; i++) dressAt(dc, box.x + i + 1, box.y + i, '#6b4a2f');
   } else if (costume === 'cleric') {
-    // Clérigo: capuz claro com debrum dourado e cruz dourada no peito.
-    drawHood(dc, x, y, '#efe7d3', '#d9ba55');
+    // Clérigo: mitra branca com faixa dourada e cruz, mais uma auréola dourada flutuando ao lado
+    // da cabeça (silhueta que se lê de longe) e a estola clara no tronco.
+    hatRows(b, x, y - 2, [
+      [6, 3, '#f2ecdb'],
+      [5, 5, '#efe7d3'],
+      [4, 7, '#f2ecdb'],
+      [3, 9, '#efe7d3'],
+      [1, 12, '#d9ba55'],
+      [0, 14, '#e2d6b4'],
+    ]);
+    b.set(x + 7, y, '#c9a94a');
+    b.set(x + 7, y + 1, '#c9a94a');
+    b.set(x + 6, y + 1, '#c9a94a');
+    b.set(x + 8, y + 1, '#c9a94a');
+    b.hline(x + 14, x + 16, y, '#ffe08a');
+    b.set(x + 15, y, '#fff6cf');
+    b.set(x + 13, y + 1, '#ffe08a');
+    b.set(x + 17, y + 1, '#ffe08a');
+    b.hline(x + 14, x + 16, y + 2, '#e6c65c');
+    b.set(x + 15, y + 3, 'rgba(255,224,138,0.35)');
     dressTorso(dc, '#efe7d3', 0.66);
     const cx = box.x + (box.w >> 1);
     for (let i = 0; i < 3; i++) dressAt(dc, cx, box.y + 1 + i, '#d9ba55');
     dressAt(dc, cx - 1, box.y + 2, '#d9ba55');
     dressAt(dc, cx + 1, box.y + 2, '#d9ba55');
   } else if (costume === 'smith') {
-    // Ferreiro: avental de couro com alças e martelo apoiado no ombro direito.
+    // Ferreiro: touca de couro larga com nó e ponta de bandana, avental com alças e martelo de aço
+    // levantado ao lado do corpo.
+    hatRows(b, x, y - 2, [
+      [4, 4, '#8a5c33'],
+      [2, 8, '#7b4f2b'],
+      [0, 14, '#5b3820'],
+      [0, 14, '#8a5c33'],
+      [1, 12, '#c08a52'],
+      [1, 12, '#6b4426'],
+    ]);
+    b.set(x + 5, y - 2, '#c08a52');
+    b.set(x + 3, y, '#e0b878');
+    b.rect(x - 1, y + 1, 1, 4, '#5b3820');
+    b.rect(x + 14, y + 6, 4, 3, '#b8c1cf');
+    b.hline(x + 14, x + 17, y + 8, '#8d96a6');
+    b.set(x + 14, y + 6, '#e6ecf4');
+    b.vline(x + 15, y + 9, y + 15, '#8a6636');
+    b.set(x + 15, y + 12, '#6b4a2f');
     dressTorso(dc, '#7b4f2b', 0.62, [1, box.w - 2]);
     for (let yy = box.y; yy < box.y + 2; yy++) {
       dressAt(dc, box.x + 1, yy, '#5b3820');
       dressAt(dc, box.x + box.w - 2, yy, '#5b3820');
     }
-    b.rect(box.x + 9, box.y + 3, 4, 3, '#8d96a6'); // cabeça do martelo no quadril
-    b.set(box.x + 9, box.y + 3, '#b8c1cf');
-    b.vline(box.x + 10, box.y + 1, box.y + 2, '#6b4a2f'); // cabo
   } else if (costume === 'scholar') {
-    // Estudioso: capuz de lã e pergaminho junto ao peito.
-    drawHood(dc, x, y, '#a5814f', '#c9a86e');
+    // Estudioso: capuz de lã marrom com copa arredondada alta e pergaminho flutuando ao lado da
+    // cabeça (a "leitura" pendurada, visível mesmo sentado).
+    drawHood(dc, x, y, '#b08c58', '#d8c79a');
+    hatRows(b, x, y - 2, [
+      [5, 4, '#c9a86e'],
+      [3, 8, '#b08c58'],
+      [2, 10, '#b08c58'],
+      [1, 12, '#d8c79a'],
+    ]);
+    b.set(x + 6, y - 1, '#e6d6ac');
+    b.rect(x + 14, y + 2, 4, 5, '#f3e7c8');
+    b.hline(x + 14, x + 17, y + 2, '#d8c79a');
+    b.hline(x + 14, x + 17, y + 6, '#d8c79a');
+    b.set(x + 16, y + 3, '#8a7a5a');
+    b.hline(x + 15, x + 16, y + 4, '#8a7a5a');
+    b.set(x + 16, y + 5, '#8a7a5a');
+    b.set(x + 13, y + 1, '#fff6cf');
     dressTorso(dc, '#8b6a41', 0.5);
     b.rect(box.x + 1, box.y + 1, 3, 4, '#f3e7c8');
     b.hline(box.x + 1, box.x + 3, box.y + 2, '#c9503f');

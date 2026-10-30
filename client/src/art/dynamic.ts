@@ -45,6 +45,67 @@ const SYNTAX = ['#ff79c6', '#8be9fd', '#f1fa8c', '#50fa7b', '#bd93f9', '#ffb86c'
 
 // ------------------------------------------------------------------ telas
 
+/**
+ * Qual desenho entra no lugar de uma tela do mundo? No escritório a TV/fliperama mostra o programa
+ * ao vivo (futebol, código, jogo); na skin de fantasia isso seria um anacronismo, então as duas
+ * viram espelho mágico (redemoinho roxo/ciano). Função pura para o render e para os testes.
+ */
+export function wallScreenMode(kind: 'tv' | 'arcade', fantasy: boolean): 'live' | 'mirror' {
+  return fantasy ? 'mirror' : 'live';
+}
+
+/**
+ * Espelho mágico no lugar da tela da TV/fliperama na skin de fantasia: fundo roxo profundo, anéis
+ * do roxo ao ciano girando devagar e estrelinhas que piscam. Mesmas regras das telas: só fillRect
+ * inteiro, dentro do retângulo, custo quase fixo.
+ */
+export function drawMagicMirror(ctx: Ctx, r: Rect, t: number, seed = 0): void {
+  const x = Math.round(r.x);
+  const y = Math.round(r.y);
+  const w = Math.round(r.w);
+  const h = Math.round(r.h);
+  if (w <= 0 || h <= 0) return;
+  clipTo(x, y, w, h);
+  fill(ctx, x, y, w, h, '#241a3e');
+  // Vinheta: bordas mais escuras dão a profundidade de vidro.
+  fill(ctx, x, y, w, 1, '#33255a');
+  fill(ctx, x, y, 1, h, '#2c2050');
+  fill(ctx, x, y + h - 1, w, 1, '#1a1230');
+  const cx = x + (w - 1) / 2;
+  const cy = y + (h - 1) / 2;
+  const spin = frac(t / 2600 + (seed >>> 0) * 0.013);
+  const rings = 3 + (w >= 14 ? 1 : 0);
+  for (let i = 0; i < rings; i++) {
+    // Raio cresce com o anel; a cor vai do roxo (centro) ao ciano (borda).
+    const k = (i + 1) / rings;
+    const rx = Math.max(1, (w / 2) * k);
+    const ry = Math.max(1, (h / 2) * k);
+    const c = mix('#8a68d8', '#7fe0e8', k * k);
+    const c2 = mix('#c8b4ff', '#d8f6ff', k);
+    const steps = 16 + i * 4;
+    for (let a = 0; a < steps; a++) {
+      const ang = (a / steps) * Math.PI * 2 + spin * Math.PI * 2 * (i % 2 === 0 ? 1 : -1);
+      const px = Math.round(cx + Math.cos(ang) * rx);
+      const py = Math.round(cy + Math.sin(ang) * ry * 0.8);
+      fill(ctx, px, py, 1, 1, a % 4 === 0 ? c2 : c);
+    }
+  }
+  // Núcleo luminoso e estrelinhas piscando em posições fixas (por seed).
+  fill(ctx, Math.round(cx), Math.round(cy), 1, 1, '#f2f7ff');
+  const pulse = Math.floor(t / 520);
+  for (let i = 0; i < 3; i++) {
+    const hx = x + 1 + (h32(seed, i * 7 + 1) % Math.max(1, w - 2));
+    const hy = y + 1 + (h32(seed, i * 13 + 5) % Math.max(1, h - 2));
+    const on = (h32(pulse + i, seed) & 3) !== 0;
+    if (!on) continue;
+    fill(ctx, hx, hy, 1, 1, '#fff3c4');
+    fill(ctx, hx - 1, hy, 1, 1, 'rgba(200,240,255,0.55)');
+    fill(ctx, hx + 1, hy, 1, 1, 'rgba(200,240,255,0.55)');
+    fill(ctx, hx, hy - 1, 1, 1, 'rgba(200,240,255,0.55)');
+    fill(ctx, hx, hy + 1, 1, 1, 'rgba(200,240,255,0.55)');
+  }
+}
+
 export function drawScreen(ctx: Ctx, r: Rect, mode: ScreenMode, t: number, seed: number): void {
   const x = Math.round(r.x);
   const y = Math.round(r.y);

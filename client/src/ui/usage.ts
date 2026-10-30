@@ -14,6 +14,8 @@ import { FIVE_HOURS_MS, relativeTime, usageLevel, usageWindowView, WEEK_MS, type
 import { ICONS } from './icons';
 import { isCodex } from './provider';
 import { usageRowFits } from './usage-row';
+import { isFantasy } from '../art/skin';
+import { fantasyGauge, gaugeLabel, type GaugeKind } from './fantasy';
 import { createAccountChip, createProviderTag, updateAccountChip, updateProviderTag } from './widgets';
 import { tr } from '../../../shared/i18n';
 
@@ -85,7 +87,7 @@ interface CardRefs {
 
 let tipSeq = 0;
 
-function createMeter(long: string, short: string, title: string): Meter {
+function createMeter(long: string, short: string, title: string, kind?: GaugeKind): Meter {
   const bar = h('span', { class: 'ui-meter__bar' }, h('span', { class: 'ui-meter__fill' }));
   const pct = h('span', { class: 'ui-meter__pct' });
   const resetLong = h('span', { class: 'ui-meter__reset-long' });
@@ -98,13 +100,20 @@ function createMeter(long: string, short: string, title: string): Meter {
     h('span', { class: 'ui-meter__label-short', text: short, attrs: { 'aria-hidden': 'true' } }),
   );
   const el = h('div', { class: 'ui-meter', role: 'img', attrs: { 'aria-label': title } }, label, bar, pct, reset);
+  // Na fantasia a barra é de vida/mana: a cor vem da classe (CSS), não do nível de uso.
+  if (kind) el.classList.add(kind === 'hp' ? 'is-hp' : 'is-mp');
   return { el, bar, pct, reset, resetLong, resetShort };
 }
 
-function updateMeter(m: Meter, view: UsageWindowView | null, windowName: string): void {
+/**
+ * `fantasy` inverte a leitura: o preenchimento passa a ser o que RESTA da cota (ver ui/fantasy.ts). Fora da
+ * fantasia, tudo como sempre (o consumido enche a barra).
+ */
+function updateMeter(m: Meter, view: UsageWindowView | null, windowName: string, fantasy = false): void {
   if (!view || view.pct === null) {
     setVariant(m.el, 'is-', 'none');
     m.el.classList.remove('is-zero');
+    m.el.classList.remove('is-critical');
     m.el.classList.toggle('is-renewed', !!view?.renewed);
     setStyleVar(m.bar, '--pct', '0');
     setText(m.pct, '—');
@@ -116,11 +125,15 @@ function updateMeter(m: Meter, view: UsageWindowView | null, windowName: string)
     return;
   }
   const p = view.pct;
+  // Fantasia: HP/MP com o que resta; escritório: barra de uso consumido, como sempre.
+  const gauge = fantasy ? fantasyGauge(p) : null;
+  const shown = gauge ? gauge.fill : p;
   m.el.classList.remove('is-renewed');
-  setVariant(m.el, 'is-', usageLevel(p));
-  m.el.classList.toggle('is-zero', p === 0);
-  setStyleVar(m.bar, '--pct', String(p));
-  setText(m.pct, `${p}%`);
+  setVariant(m.el, 'is-', gauge ? gauge.tone : usageLevel(p));
+  m.el.classList.toggle('is-critical', !!gauge?.critical);
+  m.el.classList.toggle('is-zero', shown === 0);
+  setStyleVar(m.bar, '--pct', String(shown));
+  setText(m.pct, `${shown}%`);
   setText(m.resetLong, view.reset ? `↻ ${view.reset}` : '');
   setText(m.resetShort, view.resetShort ? `↻${view.resetShort}` : '');
   setAttr(m.el, 'aria-label', `${windowName}: ${view.summary}`);
@@ -203,6 +216,8 @@ export function codexUsageNote(a: Pick<AccountInfo, 'usage' | 'usageStatus' | 'p
 
 export class UsageCards {
   readonly el: HTMLElement;
+  /** Skin fixa por carga da página (trocar recarrega): na fantasia, HP/MP com o que resta da cota. */
+  private readonly fantasy = isFantasy();
   private list: KeyedList<AccountInfo>;
   private refs = new WeakMap<HTMLElement, CardRefs>();
 
@@ -275,8 +290,18 @@ export class UsageCards {
     stateIcon.innerHTML = ICONS.clock;
     const stateText = h('span');
     const state = h('span', { class: 'ui-usage-card__state' }, stateIcon, stateText);
-    const five = createMeter('5h', '5h', tr('Sessão de 5 horas'));
-    const week = createMeter(tr('Semana'), tr('Sem.'), tr('Limite semanal'));
+    const five = createMeter(
+      this.fantasy ? gaugeLabel('hp') : '5h',
+      this.fantasy ? gaugeLabel('hp') : '5h',
+      tr('Sessão de 5 horas'),
+      this.fantasy ? 'hp' : undefined,
+    );
+    const week = createMeter(
+      this.fantasy ? gaugeLabel('mp') : tr('Semana'),
+      this.fantasy ? gaugeLabel('mp') : tr('Sem.'),
+      tr('Limite semanal'),
+      this.fantasy ? 'mp' : undefined,
+    );
     const meters = h('div', { class: 'ui-usage-card__meters' }, five.el, week.el);
     const msgLong = h('span', { class: 'ui-usage-card__msg-long', text: tr('sem dados de uso') });
     const msgShort = h('span', { class: 'ui-usage-card__msg-short', text: tr('sem dados'), attrs: { 'aria-hidden': 'true' } });
@@ -352,8 +377,8 @@ export class UsageCards {
     const showMeters = hasWindows(a);
     setHidden(r.meters, !showMeters);
     if (usage && showMeters) {
-      updateMeter(r.five, five, tr('Sessão de 5 horas'));
-      updateMeter(r.week, week, tr('Semana'));
+      updateMeter(r.five, five, tr('Sessão de 5 horas'), this.fantasy);
+      updateMeter(r.week, week, tr('Semana'), this.fantasy);
     }
     r.meters.classList.toggle('is-dim', state !== 'ok');
 

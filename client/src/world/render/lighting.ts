@@ -6,6 +6,7 @@
 // a chave de luz muda (hora em passos de poucos segundos, luz das salas, ocupação das áreas comuns,
 // montagem de salas); por frame, um drawImage em 'multiply' e alguns sprites de brilho em cache.
 import { TILE, type ArtModule, type ScreenMode } from '../../art/api';
+import { isFantasy } from '../../art/skin';
 import { mulberry32 } from '../../../../shared/hash';
 import { BUILDING_H, COL_W, CORRIDOR_H, CORRIDOR_Y } from '../constants';
 import type { ExteriorLayout, SlotShell } from '../layout/exterior';
@@ -485,8 +486,9 @@ export class Lighting {
           ctx.drawImage(cool, Math.round(f.ax - 24), Math.round(f.ay - 36));
         }
       }
-      // TV de parede ligada: luz azulada na frente da tela
-      if (n > 0.2) {
+      // TV de parede ligada: luz azulada na frente da tela. Na fantasia a TV é um espelho mágico
+      // apagado (o redemoinho é só pintura), então não há luz de tela para simular.
+      if (n > 0.2 && !isFantasy()) {
         for (const w of vis.wallItems) {
           if (w.kind !== 'tv' || !inView(w.cx, w.baseY, 60)) continue;
           ctx.globalAlpha = 0.3 * n;

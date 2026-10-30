@@ -2,6 +2,8 @@
 // ordenadas por profundidade -> luz/escuridão -> ícones. A passada em espaço de tela (texto
 // nítido) fica em overlay.ts.
 import { TILE, type ArtModule, type CharacterFrameRequest, type IconName, type ScreenMode, type Sprite } from '../../art/api';
+import { wallScreenMode } from '../../art/dynamic';
+import { isFantasy } from '../../art/skin';
 import type { SeasonalTheme, WorldOptions } from '../api';
 import type { WorldAssets } from '../assets';
 import type { Camera } from '../camera';
@@ -634,11 +636,19 @@ export class Renderer {
         const o = wallItemOrigin(w, s.base);
         ctx.drawImage(s.base.canvas, o.x, o.y + rise);
         const r = s.base.rects?.tv;
+        if (!r) return;
+        const rect = { x: o.x + r.x, y: o.y + rise + r.y, w: r.w, h: r.h };
+        if (wallScreenMode('tv', isFantasy()) === 'mirror') {
+          // Skin de fantasia: nada de programa moderno dentro da moldura — no lugar entra o
+          // redemoinho do espelho mágico (roxo/ciano), que combina com a taverna.
+          this.safe(() => this.art.drawMagicMirror(ctx, rect, now, w.seed));
+          return;
+        }
         // roda na TV do lounge: o programa escolhido (futebol, novela, desenho) ou o videogame
         const live = this.sim.social.tvScreen();
         const mode = live ? live.mode : TV_MODES[Math.floor(now / 9000) % TV_MODES.length];
         const seed = live ? live.seed : w.seed;
-        if (r) this.safe(() => this.art.drawScreen(ctx, { x: o.x + r.x, y: o.y + rise + r.y, w: r.w, h: r.h }, mode, now, seed));
+        this.safe(() => this.art.drawScreen(ctx, rect, mode, now, seed));
         return;
       }
       case 'mirror': {
@@ -787,10 +797,16 @@ export class Renderer {
       } else if (f.kind === 'coffee_machine' && state === 1) {
         this.drawSteam(f.ax, dy + 2, now, f.seed);
       } else if (f.kind === 'arcade' && s.rects?.screen) {
-        // duelo no fliperama: as duas máquinas mostram a partida
-        const seed = this.sim.social.arcadeSeed();
         const r = s.rects.screen;
-        if (seed !== null) this.safe(() => this.art.drawScreen(ctx, { x: dx + r.x, y: dy + r.y, w: r.w, h: r.h }, 'game', now, seed));
+        const rect = { x: dx + r.x, y: dy + r.y, w: r.w, h: r.h };
+        if (wallScreenMode('arcade', isFantasy()) === 'mirror') {
+          // Fantasia: a pedra rúnica pulsa o espelho mágico no lugar do joguinho de fliperama.
+          this.safe(() => this.art.drawMagicMirror(ctx, rect, now, f.seed));
+        } else {
+          // duelo no fliperama: as duas máquinas mostram a partida
+          const seed = this.sim.social.arcadeSeed();
+          if (seed !== null) this.safe(() => this.art.drawScreen(ctx, rect, 'game', now, seed));
+        }
       }
     }
     if (scaled) ctx.restore();

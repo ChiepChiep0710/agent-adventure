@@ -3315,4 +3315,13 @@ export const FR: Readonly<Record<string, string>> = {
   "Hermes: sessão {0}: {1}": "Hermes : session {0} : {1}",
   "Hermes: subagente {0}: {1}": "Hermes : sous-agent {0} : {1}",
   "Hermes: nomes.json ilegível ({0}); nomes sorteados.": "Hermes : fichier de noms illisible ({0}) ; les noms sont tirés au sort.",
+
+  // skin de fantasia (RPG) — client/src/ui/fantasy.ts et ui/settings.ts
+  "HP": "HP",
+  "MP": "MP",
+  "Diário de missões": "Journal de quêtes",
+  "Guilda": "Guilde",
+  "Skin do escritório": "Apparence du bureau",
+  "Fantasia (RPG)": "Fantaisie (RPG)",
+  "Fantasia: o escritório vira um RPG — uso do plano em HP/MP, diário de missões e molduras medievais. Trocar recarrega a página.": "Fantaisie : le bureau devient un RPG — usage du forfait en HP/MP, journal de quêtes et cadres médiévaux. Le changement recharge la page.",
 };

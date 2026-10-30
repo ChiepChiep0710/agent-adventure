@@ -365,6 +365,11 @@ export interface ArtModule {
   drawSouthWall(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, style: WallStyle, opts?: { doorways?: Doorway[] }): void;
   /** Conteúdo animado de tela (monitor/TV). `r` em px de mundo. `t` em ms. */
   drawScreen(ctx: CanvasRenderingContext2D, r: Rect, mode: ScreenMode, t: number, seed: number): void;
+  /**
+   * Espelho mágico da skin de fantasia no lugar da tela da TV/fliperama (redemoinho roxo/ciano).
+   * Só é chamado quando `wallScreenMode(kind, isFantasy())` devolve 'mirror'.
+   */
+  drawMagicMirror(ctx: CanvasRenderingContext2D, r: Rect, t: number, seed?: number): void;
   /** Post-its do quadro kanban (colunas: a fazer / fazendo / feito). */
   drawBoard(ctx: CanvasRenderingContext2D, r: Rect, items: readonly { status: 'pending' | 'in_progress' | 'completed' }[], t: number): void;
   /** Céu + horizonte visto pela janela conforme a hora local (0–24, fracionária). */

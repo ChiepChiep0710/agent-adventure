@@ -23,6 +23,11 @@ do meio (0.**3**.0).
   Os personagens ganham **classes de RPG** pela atividade (editar = mago, comando/teste = ferreiro, ler/buscar =
   estudioso, web = batedor, esperando você = cavaleiro de guarda; parado, a classe fixa do agente), os balões viram
   pergaminho, e quem precisa de você ganha o **"!" dourado de missão** (entregue: "✓" dourado).
+  Trajes de classe bem visíveis (chapéu pontudo e cajado do mago, elmo com penacho do cavaleiro, capuz e adaga do
+  ladino, mitra e auréola do clérigo, martelo do ferreiro, pergaminho do estudioso), que aparecem mesmo sentado atrás
+  da cadeira; TV e fliperama viram espelho mágico. Na interface: uso como **HP (janela de 5 h) e MP (semana)**
+  mostrando o que resta, atividade vira **Diário de missões**, a barra lateral vira **Guilda**, painéis com moldura
+  dourada, e **Configurações › Aparência** ganha o seletor de skin (Escritório / Fantasia).
 - **Nomes escolhidos para os agentes do Hermes** (`hermes-names.json`). Dois campos opcionais na pasta de dados do
   Habblaud: **`pool`** (estoque de nomes: cada agente novo, principal ou subagente, recebe um nome sorteado entre os
   ainda livres; esgotado, volta ao sorteio) e **`names`** (nome fixo por session id, que ganha do estoque). O arquivo é relido

@@ -1,6 +1,7 @@
 // Configurações (popover): opções do escritório, avisos, modo demonstração e Sobre (versão). O Habblaud World tem a
 // janela própria (ui/world/world-dialog.ts); daqui só sai a dica do tema em Aparência, que também vai para o prédio.
 import { access, remoteLogout } from '../net/access';
+import { getSkin, SKIN_STORAGE_KEY, type Skin } from '../art/skin';
 import type { UiComponent, UiContext } from './context';
 import { h, iconButton, setAttr, setHidden, setText } from './dom';
 import { ICONS } from './icons';
@@ -36,6 +37,29 @@ function pickLanguage(v: LanguageChoice): void {
 }
 
 type BoolPref = { [K in keyof UiPrefs]: UiPrefs[K] extends boolean ? K : never }[keyof UiPrefs];
+
+/**
+ * Salva a skin escolhida e recarrega (a arte e os textos são montados uma vez, ao carregar a página).
+ * `?skin=` na URL vence o valor salvo, então sai da URL antes: sem isso, trocar de skin não valeria nada.
+ */
+function pickSkin(v: Skin): void {
+  if (v === getSkin()) return;
+  try {
+    localStorage.setItem(SKIN_STORAGE_KEY, v);
+  } catch {
+    return;
+  }
+  try {
+    const url = new URL(location.href);
+    if (url.searchParams.has('skin')) {
+      url.searchParams.delete('skin');
+      history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+  } catch {
+    // URL fora do padrão: a skin salva vale na próxima carga sem ?skin.
+  }
+  location.reload();
+}
 
 interface SwitchRefs {
   btn: HTMLButtonElement;
@@ -88,6 +112,7 @@ export class SettingsPopover implements UiComponent {
   private bubbles: ReturnType<typeof segmented<UiPrefs['bubbles']>>;
   private liveliness: ReturnType<typeof segmented<UiPrefs['liveliness']>>;
   private daylight: ReturnType<typeof segmented<UiPrefs['daylight']>>;
+  private skin: ReturnType<typeof segmented<Skin>>;
   private theme: ReturnType<typeof segmented<UiPrefs['theme']>>;
   private language: ReturnType<typeof segmented<LanguageChoice>>;
   private soundGroup: SoundSettingsGroup;
@@ -141,6 +166,21 @@ export class SettingsPopover implements UiComponent {
       (v) => ctx.updatePrefs({ daylight: v }),
     );
     this.daylight.row.append(h('span', { class: 'ui-set__hint', text: tr('Automático: céu, luzes e sol nas janelas seguem a hora local.') }));
+    // Skin do escritório: por carga da página, então trocar recarrega (e tira o `?skin=` da URL, que vence o salvo).
+    this.skin = segmented<Skin>(
+      tr('Skin do escritório'),
+      [
+        ['office', tr('Escritório')],
+        ['fantasy', tr('Fantasia (RPG)')],
+      ],
+      (v) => pickSkin(v),
+    );
+    this.skin.row.append(
+      h('span', {
+        class: 'ui-set__hint',
+        text: tr('Fantasia: o escritório vira um RPG — uso do plano em HP/MP, diário de missões e molduras medievais. Trocar recarrega a página.'),
+      }),
+    );
     this.theme = segmented<UiPrefs['theme']>(
       tr('Tema do escritório'),
       [['auto', tr('Automático')], ['none', tr('Nenhum')], ['christmas', tr('Natal')], ['halloween', tr('Halloween')]],
@@ -196,7 +236,7 @@ export class SettingsPopover implements UiComponent {
       'div',
       { class: 'ui-popover ui-settings', role: 'dialog', tabIndex: -1, attrs: { 'aria-label': tr('Configurações'), id: 'ui-settings', popover: 'auto' } },
       h('div', { class: 'ui-popover__head' }, h('h2', { text: tr('Configurações') }), close),
-      h('div', { class: 'ui-set-group' }, h('h3', { text: tr('Aparência') }), this.theme.row),
+      h('div', { class: 'ui-set-group' }, h('h3', { text: tr('Aparência') }), this.skin.row, this.theme.row),
       h(
         'div',
         { class: 'ui-set-group' },
@@ -284,6 +324,7 @@ export class SettingsPopover implements UiComponent {
     this.bubbles.set(p.bubbles);
     this.liveliness.set(p.liveliness);
     this.daylight.set(p.daylight);
+    this.skin.set(getSkin());
     this.theme.set(p.theme);
     this.language.set(savedLanguage());
     this.soundGroup.render();

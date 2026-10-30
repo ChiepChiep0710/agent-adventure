@@ -25,7 +25,7 @@ import { CHAR_H, CHAR_W, POSE_DURATION, POSE_FRAMES, isSeated, renderCharacter }
 import { shade } from './core/color';
 import { PixelBuf } from './core/pixbuf';
 import type { BufSprite } from './core/sprite';
-import { drawBoard, drawClock, drawScreen, drawWindowView, footballLance } from './dynamic';
+import { drawBoard, drawClock, drawMagicMirror, drawScreen, drawWindowView, footballLance, wallScreenMode } from './dynamic';
 import { normalizeFurniture, renderFurniture } from './furniture/index';
 import { renderIcon } from './icons';
 import { isFantasy } from './skin';
@@ -37,7 +37,7 @@ import { roomTheme as roomThemePure } from './theme';
 
 export * from './api';
 export { hash32 };
-export { drawBoard, drawClock, drawScreen, drawWindowView, footballLance };
+export { drawBoard, drawClock, drawMagicMirror, drawScreen, drawWindowView, footballLance, wallScreenMode };
 export { editorConflict, editorOptions, fitToOptions, type EditorOptions } from './character/appearance';
 
 // ------------------------------------------------------------------ canvas e cache
@@ -335,6 +335,7 @@ const _contract: ArtModule = {
   drawWallTop,
   drawSouthWall,
   drawScreen,
+  drawMagicMirror,
   drawBoard,
   drawWindowView,
   drawClock,

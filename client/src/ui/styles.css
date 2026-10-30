@@ -11165,3 +11165,162 @@ html.is-replay #world {
   --ui-accent: #e8c15a;
   --ui-accent-soft: rgba(232, 193, 90, 0.16);
 }
+
+/* Moldura medieval: borda dupla dourada (uma linha fina por dentro), canto mais reto e títulos em pixel.
+   Só cor, sombra e raio mudam: nenhuma medida de painel, barra ou linha muda de lugar. */
+.ui-root.skin-fantasy .ui-panel,
+.ui-root.skin-fantasy .ui-popover {
+  border-radius: 4px;
+  border-color: rgba(212, 170, 90, 0.55);
+  box-shadow:
+    0 12px 32px rgba(5, 3, 1, 0.45),
+    inset 0 0 0 1px rgba(16, 10, 6, 0.85),
+    inset 0 0 0 2px rgba(212, 170, 90, 0.3);
+}
+
+.ui-root.skin-fantasy .ui-topbar {
+  box-shadow: inset 0 -1px 0 rgba(212, 170, 90, 0.35);
+}
+
+.ui-root.skin-fantasy .ui-side__title h2,
+.ui-root.skin-fantasy .ui-feed__title h2,
+.ui-root.skin-fantasy .ui-set-group h3 {
+  font-family: var(--font-px);
+  letter-spacing: 0.02em;
+  color: var(--ui-accent);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.55);
+}
+
+/* Botões: dourado sobre madeira ao passar o mouse. */
+.ui-root.skin-fantasy .ui-btn:hover,
+.ui-root.skin-fantasy .ui-icon-btn:hover,
+.ui-root.skin-fantasy .ui-seg__opt:hover {
+  background: rgba(232, 193, 90, 0.14);
+  border-color: rgba(232, 193, 90, 0.6);
+  color: #f7e6b8;
+}
+
+.ui-root.skin-fantasy .ui-btn.is-on,
+.ui-root.skin-fantasy .ui-seg__opt[aria-checked='true'] {
+  background: rgba(232, 193, 90, 0.18);
+  border-color: rgba(232, 193, 90, 0.7);
+  color: #f7e6b8;
+}
+
+/* HP (sessão de 5 h) e MP (semana): o preenchimento é o que RESTA da cota, então a barra drena conforme o uso
+   (ver ui/fantasy.ts). A moldura dourada fina mantém o ar de ficha de personagem. */
+.ui-root.skin-fantasy .ui-meter__bar {
+  box-shadow: inset 0 0 0 1px rgba(212, 170, 90, 0.28);
+}
+
+.ui-root.skin-fantasy .ui-meter.is-hp {
+  --lv: #d94a3a;
+}
+
+.ui-root.skin-fantasy .ui-meter.is-mp {
+  --lv: #4a86d8;
+}
+
+.ui-root.skin-fantasy .ui-meter.is-hp.is-warn {
+  --lv: #d3702e;
+}
+
+.ui-root.skin-fantasy .ui-meter.is-mp.is-warn {
+  --lv: #3f6db8;
+}
+
+.ui-root.skin-fantasy .ui-meter.is-hp.is-crit {
+  --lv: #ff5b45;
+}
+
+.ui-root.skin-fantasy .ui-meter.is-mp.is-crit {
+  --lv: #7fb0ff;
+}
+
+.ui-root.skin-fantasy .ui-meter.is-hp .ui-meter__label,
+.ui-root.skin-fantasy .ui-meter.is-mp .ui-meter__label {
+  font-family: var(--font-px);
+  letter-spacing: 0.04em;
+}
+
+.ui-root.skin-fantasy .ui-meter.is-hp .ui-meter__label {
+  color: #e79e90;
+}
+
+.ui-root.skin-fantasy .ui-meter.is-mp .ui-meter__label {
+  color: #9dbfef;
+}
+
+/* Resto crítico (menos de 20%): a barra pisca — só a opacidade, sem mexer em tamanho nem posição. */
+@keyframes ui-fantasy-critical {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+.ui-root.skin-fantasy .ui-meter.is-critical .ui-meter__fill {
+  animation: ui-fantasy-critical 0.9s steps(2, end) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-root.skin-fantasy .ui-meter.is-critical .ui-meter__fill {
+    animation: none;
+  }
+}
+
+/* Diário de missões: cada linha numa tira de pergaminho (fundo e tom; altura e colunas intactas). */
+.ui-root.skin-fantasy .ui-feed__list > .ui-feed__item {
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(241, 230, 207, 0.07), rgba(241, 230, 207, 0.02) 70%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(212, 170, 90, 0.1);
+}
+
+.ui-root.skin-fantasy .ui-feed__item .ui-feed__row {
+  border-radius: 4px;
+}
+
+.ui-root.skin-fantasy .ui-feed__time {
+  color: #c9ac74;
+}
+
+/* Pergunta ao usuário (activity 'ask'): a linha do diário ganha o "!" dourado de missão, antes do texto. */
+.ui-root.skin-fantasy .ui-feed__item.is-ask .ui-feed__text::before {
+  content: '! ';
+  color: #f2c14e;
+  font-family: var(--font-px);
+  font-weight: 700;
+  text-shadow: 0 0 6px rgba(242, 193, 78, 0.7);
+}
+
+/* "precisa de você" com marca de missão dourada (o "!" do quadro de tarefas). Posicionada, não empurra nada. */
+@keyframes ui-fantasy-quest {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.ui-root.skin-fantasy .ui-counter--waiting {
+  position: relative;
+}
+
+.ui-root.skin-fantasy .ui-counter--waiting.is-active::after {
+  content: '!';
+  position: absolute;
+  top: 1px;
+  right: 4px;
+  font: 700 12px/1 var(--font-px);
+  color: #f2c14e;
+  text-shadow: 0 0 6px rgba(242, 193, 78, 0.85);
+  pointer-events: none;
+  animation: ui-fantasy-quest 1.6s ease-in-out infinite;
+}

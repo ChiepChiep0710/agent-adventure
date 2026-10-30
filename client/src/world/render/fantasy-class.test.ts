@@ -5,6 +5,7 @@ import type { Dir, Pose } from '../../art/api';
 import { setSkinForTests } from '../../art/skin';
 import { FANTASY_CLASSES, baseFantasyClass, characterCostume, classForActivity, fantasyClassFor } from './fantasy-class';
 import { bubblePalette, statusMarker } from './overlay';
+import { wallScreenMode } from '../../art/dynamic';
 
 afterEach(() => setSkinForTests(undefined));
 
@@ -71,5 +72,26 @@ describe('balões e marcas (skin de fantasia)', () => {
     expect(statusMarker('deliver')).toBe('done');
     expect(statusMarker('info')).toBeNull();
     expect(statusMarker('shell')).toBeNull();
+  });
+});
+
+describe('polimento da fantasia', () => {
+  it('chapéus/elmos/capuzes passam do topo da cabeça, em pé e sentado', () => {
+    const appearance = appearanceFromSeed(42);
+    for (const dir of ['down', 'up', 'left'] as Dir[]) {
+      for (const pose of ['stand', 'sit'] as Pose[]) {
+        const req = { appearance, dir, pose, frame: 0 };
+        const top = renderCharacter(req).buf.bounds()!.y;
+        for (const costume of FANTASY_CLASSES) {
+          const b = renderCharacter({ ...req, costume }).buf.bounds()!;
+          expect(b.y, `${costume} ${dir} ${pose}`).toBeLessThan(top);
+        }
+      }
+    }
+  });
+  it('TV e fliperama viram espelho mágico só na fantasia', () => {
+    expect(wallScreenMode('tv', true)).toBe('mirror');
+    expect(wallScreenMode('arcade', true)).toBe('mirror');
+    expect(wallScreenMode('tv', false)).toBe('live');
   });
 });

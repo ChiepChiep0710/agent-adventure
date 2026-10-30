@@ -7,6 +7,8 @@ import { h, KeyedList, setAttr, setHidden, setText, setTitle } from './dom';
 import { formatClock } from './format';
 import { ICONS } from './icons';
 import { shellDoneKind } from './model';
+import { feedTitle } from './fantasy';
+import { isFantasy } from '../art/skin';
 import { officeIsEmpty } from './overlays';
 import { createAccountChip, updateAccountChip } from './widgets';
 import { tr } from '../../../shared/i18n';
@@ -17,6 +19,8 @@ type AgentMeta = Pick<AgentInfo, 'seed' | 'look' | 'kind' | 'account' | 'parts'>
 
 export class FeedPanel implements UiComponent {
   readonly el: HTMLElement;
+  /** Skin fixa por carga da página: na fantasia, o feed é o diário de missões da guilda. */
+  private readonly fantasy = isFantasy();
   private list: HTMLElement;
   private rows: KeyedList<FeedItem>;
   private items: FeedItem[] = [];
@@ -51,11 +55,11 @@ export class FeedPanel implements UiComponent {
     });
     this.el = h(
       'section',
-      { class: 'ui-panel ui-feed', attrs: { 'aria-label': tr('Feed de atividade'), id: 'ui-feed' } },
+      { class: 'ui-panel ui-feed', attrs: { 'aria-label': this.panelLabel(), id: 'ui-feed' } },
       h(
         'div',
         { class: 'ui-feed__head' },
-        h('button', { class: 'ui-feed__title', type: 'button', on: { click: () => ctx.togglePanel('feed') } }, h('h2', { text: tr('Atividade') }), this.filterNote, this.ticker),
+        h('button', { class: 'ui-feed__title', type: 'button', on: { click: () => ctx.togglePanel('feed') } }, h('h2', { text: feedTitle(this.fantasy) }), this.filterNote, this.ticker),
         this.newPill,
         this.toggleBtn,
       ),
@@ -190,6 +194,11 @@ export class FeedPanel implements UiComponent {
     this.ctx.invalidate();
   }
 
+  /** Rótulo acessível do painel: no escritório, o "feed de atividade" de sempre; na fantasia, o diário. */
+  private panelLabel(): string {
+    return this.fantasy ? feedTitle(true) : tr('Feed de atividade');
+  }
+
   private createRow(f: FeedItem): HTMLElement {
     const m = this.meta.get(f.agentId) ?? this.metaFromStore(f.agentId);
     const avatar = m ? createAvatar(m, 'xs') : createAvatarPlaceholder('xs');
@@ -226,6 +235,8 @@ export class FeedPanel implements UiComponent {
     setText(icon, f.activity.icon);
     setText(text, f.activity.text);
     li.classList.toggle('is-error', !!f.activity.error);
+    // Pergunta ao usuário (kind 'ask'): na fantasia, a linha ganha a marca de missão dourada (CSS).
+    li.classList.toggle('is-ask', f.activity.kind === 'ask');
     li.classList.toggle('is-social', f.id.startsWith('social:'));
     // Fim de um shell (✅ terminou / ❌ falhou ou foi interrompido): linha com destaque próprio.
     const done = shellDoneKind(f.activity);

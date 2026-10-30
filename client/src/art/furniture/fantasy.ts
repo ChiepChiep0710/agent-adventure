@@ -430,14 +430,14 @@ export function filingCabinet(): BufFurniture {
   const m = F.oldWood;
   topFace(b, 1, -7, 14, 4, m);
   frontFace(b, 1, -3, 14, 19, m);
-  // Cintas e ferragens de ferro.
+  // Cintas de madeira escura com cravos de latão (nada de corrediças de aço).
   for (const x of [3, 12]) {
-    b.vline(x, -3, 15, F.iron.base);
-    b.vline(x + 1, -3, 15, F.ironDark.dk);
+    b.vline(x, -3, 15, F.oakDark.dk);
+    b.vline(x + 1, -3, 15, F.leather);
   }
-  b.hline(1, 14, 4, F.iron.base);
-  b.hline(1, 14, 5, F.ironDark.dk);
-  b.rect(7, 1, 2, 4, F.ironDark.base);
+  b.hline(1, 14, 4, F.oakDark.dk);
+  b.hline(1, 14, 5, F.leather);
+  b.rect(7, 1, 2, 4, '#c9a94a');
   b.set(7, 3, F.gold);
   b.hline(2, 13, -3, m.lt);
   // Vela acesa em cima (lugar do vasinho original).
@@ -799,7 +799,11 @@ export function painting(seed: number): BufFurniture {
   return { base: s };
 }
 
-/** Espelho mágico no lugar da TV: moldura de ferro e vidro fundo (o render desenha a "visão"). */
+/**
+ * Espelho mágico no lugar da TV: moldura de carvalho entalhado com cantos dourados e vidro roxo
+ * (o mundo desenha o redemoinho de magia por cima). Nada de aço escovado nem tela apagada: na
+ * fantasia a parede do lounge não pode parecer uma TV moderna.
+ */
 export function tv(): BufFurniture {
   const s = wallSheet(2);
   const b = s.buf;
@@ -807,19 +811,26 @@ export function tv(): BufFurniture {
   const y = -27;
   const w = 30;
   const h = 18;
-  b.rect(x, y, w, h, F.ironDark.base);
-  b.hline(x, x + w - 1, y, F.iron.base);
-  b.vline(x, y, y + h - 1, F.iron.base);
-  b.vline(x + w - 1, y, y + h - 1, F.ironDark.dd);
-  b.hline(x, x + w - 1, y + h - 1, F.ironDark.dd);
-  // Cantos ornamentados em ouro.
-  for (const [dx, dy] of [[1, 1], [w - 3, 1], [1, h - 3], [w - 3, h - 3]] as const) b.set(x + dx, y + dy, F.gold);
-  b.rect(x + 2, y + 2, w - 4, h - 4, '#243048');
-  b.hline(x + 2, x + w - 3, y + 2, '#3a4a6a');
-  // Runas gravadas na borda inferior.
-  for (let xx = x + 4; xx < x + w - 4; xx += 4) b.set(xx, y + h - 2, F.magic);
+  // Moldura de carvalho claro: veio no alto, sombra na base e nas laterais.
+  b.rect(x, y, w, h, F.oldWood.base);
+  b.hline(x, x + w - 1, y, F.oldWood.lt);
+  b.hline(x, x + w - 1, y + 1, F.oak.lt);
+  b.vline(x, y, y + h - 1, F.oak.base);
+  b.vline(x + w - 1, y, y + h - 1, F.oakDark.dd);
+  b.hline(x, x + w - 1, y + h - 1, F.oakDark.dd);
+  // Cantos e cravos dourados.
+  for (const [dx, dy] of [[2, 2], [w - 4, 2], [2, h - 4], [w - 4, h - 4]] as const) b.set(x + dx, y + dy, F.gold);
+  // Entalhe de folhas nas laterais.
+  for (const dx of [3, w - 5]) b.vline(x + dx, y + 5, y + h - 6, F.oakDark.dk);
+  // Vidro do espelho: roxo profundo com veios de magia.
+  b.rect(x + 4, y + 3, w - 8, h - 6, '#2b2340');
+  b.hline(x + 4, x + w - 5, y + 3, '#3d3160');
+  b.hline(x + 4, x + w - 5, y + h - 4, '#1e1834');
+  for (let i = 0; i < 4; i++) b.set(x + 7 + i * 4, y + 5 + (i % 2) * 3, 'rgba(127,224,208,0.45)');
+  // Runas douradas gravadas na moldura inferior.
+  for (let xx = x + 6; xx < x + w - 6; xx += 4) b.set(xx, y + h - 2, F.gold);
   b.outline();
-  s.rects = { tv: rectAt(s, x + 2, y + 2, w - 4, h - 4) };
+  s.rects = { tv: rectAt(s, x + 4, y + 3, w - 8, h - 6) };
   return { base: s };
 }
 
@@ -884,8 +895,9 @@ export function fridge(): BufFurniture {
   b.vline(8, -20, 15, F.oakDark.dk);
   b.vline(9, -20, 15, F.oakDark.lt);
   for (const [x, y] of [[2, -18], [12, -18], [2, 2], [12, 2]] as const) {
-    b.rect(x, y, 2, 3, F.iron.base);
-    b.set(x, y, F.iron.lt);
+    // Dobradiças de latão (o ferro cinza fazia o armário parecer eletrodoméstico).
+    b.rect(x, y, 2, 3, '#c9a94a');
+    b.set(x, y, '#efd68a');
   }
   b.set(7, -12, F.gold);
   b.set(10, -12, F.gold);
@@ -1104,27 +1116,37 @@ export function beanbag(variant: string | undefined): BufFurniture {
   return { base: s };
 }
 
-/** Pedra rúnica / espelho mágico (lugar do fliperama). */
+/**
+ * Menir rúnico (lugar do fliperama): arenito quente com musgo, cintas de ferro e espelho de magia
+ * emoldurado em madeira. O cinza de metal do fliperama some — dois menires no lounge leem como
+ * santuário, não como armário de escritório.
+ */
 export function arcade(): BufFurniture {
   const s = floorSheet(1, 1, 24);
   const b = s.buf;
   const screen = { x: 3, y: -17, w: 10, h: 8 };
-  // Monólito de pedra com veios e runas.
-  frontFace(b, 1, -20, 14, 36, F.stone);
-  b.hline(2, 13, -19, F.stone.lt);
-  b.vline(1, -20, 15, F.stone.hi);
-  b.vline(14, -20, 15, F.stone.dk);
-  // Moldura de ferro do espelho.
-  b.rect(2, -18, 12, 10, F.ironDark.base);
-  b.hline(2, 13, -18, F.iron.base);
-  b.rect(screen.x, screen.y, screen.w, screen.h, '#1a2a3a');
-  b.rect(screen.x + 1, screen.y + 1, screen.w - 2, 2, '#2c4a5a');
-  // Runas gravadas (brilham).
+  const sand = ramp('#c4a878', 0.07);
+  // Corpo: menir de arenito, luz no topo e sombra à direita.
+  frontFace(b, 1, -20, 14, 36, sand);
+  b.hline(2, 13, -19, '#d9c49a');
+  b.vline(1, -20, 15, '#e2cfa6');
+  b.vline(14, -20, 15, '#8f7a56');
+  // Rachaduras e musgo (pedra velha).
+  b.vline(4, -8, -4, 'rgba(90,74,52,0.55)');
+  b.set(5, -6, 'rgba(90,74,52,0.55)');
+  for (const [x, y] of [[2, -12], [3, -11], [12, -3], [13, -4], [2, 9], [13, 8]] as const) b.set(x, y, '#5f7a4a');
+  // Moldura do espelho: madeira entalhada com cantos dourados.
+  b.rect(2, -18, 12, 10, F.oakDark.base);
+  b.hline(2, 13, -18, F.oak.lt);
+  for (const [x, y] of [[2, -18], [13, -18], [2, -9], [13, -9]] as const) b.set(x, y, F.gold);
+  b.rect(screen.x, screen.y, screen.w, screen.h, '#2b2340');
+  b.hline(screen.x, screen.x + screen.w - 1, screen.y, '#3d3160');
+  // Runas gravadas no arenito (brilham).
   for (const [x, y] of [[3, -6], [6, -6], [9, -6], [12, -6], [4, -2], [8, -2], [11, -2]] as const) b.set(x, y, F.magic);
   b.hline(3, 12, -5, 'rgba(127,224,208,0.35)');
-  // Pedestal.
-  b.rect(0, 13, 16, 3, F.ironDark.dk);
-  b.hline(0, 15, 13, F.ironDark.base);
+  // Base de madeira com cravos.
+  b.rect(0, 13, 16, 3, F.oakDark.base);
+  b.hline(0, 15, 13, F.oak.lt);
   b.outline();
   contact(b, 0, 13, 16, 4, 0.26);
   s.rects = { screen: rectAt(s, screen.x, screen.y, screen.w, screen.h) };

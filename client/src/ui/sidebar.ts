@@ -1,10 +1,12 @@
 // Barra lateral: busca, filtro por conta e a lista de salas -> agentes -> subagentes.
 import type { AccountInfo, AgentInfo } from '../../../shared/types';
 import { roomTheme } from '../art';
+import { isFantasy } from '../art/skin';
 import type { UiComponent, UiContext } from './context';
 import { moveAgent, orderAgents } from './agentorder';
 import { moveRoom, orderRooms } from './roomorder';
 import { h, iconButton, KeyedList, setAttr, setHidden, setStyleVar, setText, setTitle } from './dom';
+import { sidebarTitle } from './fantasy';
 import { plural, shortPath } from './format';
 import { ICONS } from './icons';
 import { groupRooms, type AgentNode, type RoomGroup } from './model';
@@ -132,7 +134,7 @@ export class Sidebar implements UiComponent {
     this.el = h(
       'aside',
       { class: 'ui-panel ui-sidebar', attrs: { 'aria-label': tr('Salas e agentes'), id: 'ui-sidebar' } },
-      h('div', { class: 'ui-side__head' }, h('div', { class: 'ui-side__title' }, h('h2', { text: tr('Escritório') }), close), search, this.filters),
+      h('div', { class: 'ui-side__head' }, h('div', { class: 'ui-side__title' }, h('h2', { text: sidebarTitle(isFantasy()) }), close), search, this.filters),
       this.scroller,
     );
   }
