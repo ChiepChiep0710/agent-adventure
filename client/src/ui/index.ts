@@ -10,6 +10,7 @@ import '@fontsource/pixelify-sans/700.css';
 import './styles.css';
 
 import type { OfficeStore } from '../net/store';
+import { isFantasy } from '../art/skin';
 import type { Selection, WorldApi } from '../world/api';
 import type { PanelName, TerminalRouter, UiComponent, UiContext } from './context';
 import { DayLauncher } from './daystats-launcher';
@@ -288,6 +289,8 @@ export function createUI(root: HTMLElement, store: OfficeStore, world: WorldApi,
   const scrim = h('div', { class: 'ui-scrim', attrs: { 'aria-hidden': 'true' }, on: { click: () => ctx.togglePanel('sidebar', false) } });
 
   root.classList.add('ui-root');
+  // Skin de fantasia (RPG clássico): pergaminho e madeira escura nos painéis; o layout não muda.
+  if (isFantasy()) root.classList.add('skin-fantasy');
   root.append(timelapse.vignette, topbar.el, sidebar.el, scrim, feed.el, drawer.el, terminal.el, pty.el, timelapse.el, timelapse.badge, toasts.el, banner.el, update.el, empty.el, popups.el, tip.el, settings.el, worldDialog.el, history.el, deliveries.el, help.el, renamer.el, live, splash.el);
   area = new FreeArea(world, { root, topbar: topbar.el, sidebar: sidebar.el, drawer: drawer.el, feed: feed.el }, () => ({
     sidebar: panels.sidebar,

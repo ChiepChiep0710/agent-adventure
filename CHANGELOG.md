@@ -12,6 +12,9 @@ do meio (0.**3**.0).
 
 ### Adicionado
 
+- **Skin de fantasia (RPG clássico).** `?skin=fantasy` (ou `rpg`) troca pisos, paredes, temas de sala e a paleta dos
+  painéis por pedra, madeira velha e pergaminho com linhas douradas; `?skin=office` volta ao escritório, e a escolha
+  fica salva no navegador. O escritório continua sendo o padrão.
 - **Nomes escolhidos para os agentes do Hermes** (`hermes-names.json`). Dois campos opcionais na pasta de dados do
   Habblaud: **`pool`** (estoque de nomes: cada agente novo, principal ou subagente, recebe um nome sorteado entre os
   ainda livres; esgotado, volta ao sorteio) e **`names`** (nome fixo por session id, que ganha do estoque). O arquivo é relido

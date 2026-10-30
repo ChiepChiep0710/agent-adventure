@@ -11147,3 +11147,21 @@ html.is-replay #world {
 .ui-world-chip__visitors[hidden] {
   display: none;
 }
+
+/* ------------------------------------------------------------------ skin de fantasia (RPG clássico)
+   `?skin=fantasy` põe a classe no .ui-root (ui/index.ts). Só troca a paleta dos painéis: pergaminho
+   escuro, madeira e linhas douradas. Nenhuma medida, sombra ou posição muda — o layout é o mesmo. */
+.ui-root.skin-fantasy {
+  --ui-bg: rgba(34, 24, 18, 0.9);
+  --ui-bg-solid: rgba(38, 27, 20, 0.97);
+  --ui-bg-soft: rgba(241, 230, 207, 0.05);
+  --ui-bg-hover: rgba(232, 193, 90, 0.1);
+  --ui-line: rgba(212, 170, 90, 0.22);
+  --ui-line-strong: rgba(212, 170, 90, 0.4);
+  --ui-text: #f1e6cf;
+  --ui-muted: #bfae8c;
+  /* 6,7:1 sobre o painel (#261b14) e 6,1:1 sobre linhas em destaque: AA para texto pequeno. */
+  --ui-faint: #b3a184;
+  --ui-accent: #e8c15a;
+  --ui-accent-soft: rgba(232, 193, 90, 0.16);
+}

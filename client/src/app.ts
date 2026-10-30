@@ -7,6 +7,7 @@ import { createUI } from './ui';
 import type { CitySceneHost } from './ui/world/scene-switch';
 import type { CityScene } from './world/city';
 import { migrateLegacyKeys, safeLocalStorage } from './ui/prefs';
+import { getSkin } from './art/skin';
 import { getLocale, tr } from '../../shared/i18n';
 
 export function start(): void {
@@ -15,6 +16,8 @@ export function start(): void {
 
   // Idioma escolhido (shared/i18n): leitores de tela e o corretor do navegador seguem o atributo lang.
   document.documentElement.lang = getLocale();
+  // Skin visual (office/fantasy): fica no <html> para depuração e para o CSS saber em que pele está.
+  document.documentElement.dataset.skin = getSkin();
   document.querySelector('meta[name="description"]')?.setAttribute(
     'content',
     tr('Escritório virtual em pixel art que mostra, em tempo real, o que seus agentes do Claude Code estão fazendo.'),

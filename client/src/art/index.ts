@@ -28,7 +28,9 @@ import type { BufSprite } from './core/sprite';
 import { drawBoard, drawClock, drawScreen, drawWindowView, footballLance } from './dynamic';
 import { normalizeFurniture, renderFurniture } from './furniture/index';
 import { renderIcon } from './icons';
+import { isFantasy } from './skin';
 import { CHUNK_PX, floorChunk } from './surfaces/floor';
+import { fantasyCapColor, fantasyFloorChunk, fantasySouthWallTile, fantasyStoneBase, fantasyWallFaceTile } from './surfaces/fantasy';
 import { WALL_CAP_H, WALL_FACE_H, capColor, southWallTile, wallFaceTile } from './surfaces/walls';
 import { renderRug } from './surfaces/rug';
 import { roomTheme as roomThemePure } from './theme';
@@ -171,14 +173,16 @@ export function drawFloor(
   opts: { seed: number; tint?: string; tint2?: string },
 ): void {
   // Blocos de 8x8 tiles alinhados à grade do mundo, recortados à área pedida.
+  // A skin de fantasia usa pedra/terra/madeira velha nos mesmos lugares.
+  const fantasy = isFantasy();
   const cx0 = Math.floor(x / CHUNK_PX);
   const cy0 = Math.floor(y / CHUNK_PX);
   const cx1 = Math.ceil((x + w) / CHUNK_PX);
   const cy1 = Math.ceil((y + h) / CHUNK_PX);
   for (let cy = cy0; cy < cy1; cy++) {
     for (let cx = cx0; cx < cx1; cx++) {
-      const key = `f|${kind}|${opts.seed}|${opts.tint ?? ''}|${opts.tint2 ?? ''}|${cx}|${cy}`;
-      const chunk = floorCache.get(key, () => toCanvas(floorChunk(kind, cx, cy, opts)));
+      const key = `f|${fantasy ? 'fantasy' : 'office'}|${kind}|${opts.seed}|${opts.tint ?? ''}|${opts.tint2 ?? ''}|${cx}|${cy}`;
+      const chunk = floorCache.get(key, () => toCanvas(fantasy ? fantasyFloorChunk(kind, cx, cy, opts) : floorChunk(kind, cx, cy, opts)));
       const px = cx * CHUNK_PX;
       const py = cy * CHUNK_PX;
       const sx = Math.max(0, x - px);
@@ -242,15 +246,20 @@ function drawTiled(
 
 export function drawWallFace(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, style: WallStyle, opts: { doorways?: Doorway[] } = {}): void {
   const sk = styleKey(style);
+  const fantasy = isFantasy();
   const tileFor = (tx: number) => {
     const variant = tileHash(7, tx, 0) % 4;
     const col = tx & 1;
-    return tileCache.get(`w|${sk}|${variant}|${col}`, () => toCanvas(wallFaceTile(style, variant, col)));
+    return tileCache.get(`${fantasy ? 'wf' : 'w'}|${sk}|${variant}|${col}`, () =>
+      toCanvas(fantasy ? fantasyWallFaceTile(style, variant, col) : wallFaceTile(style, variant, col)),
+    );
   };
   const segs = solidSegments(x, w, opts.doorways);
-  const jamb = shade(style.base, -0.14);
-  const jambLight = shade(style.base, 0.04);
-  const cap = capColor(style);
+  // Na fantasia a parede é pedra: batentes e tampa saem do tom já remapeado (ver fantasyStoneBase).
+  const base = fantasy ? fantasyStoneBase(style.base) : style.base;
+  const jamb = shade(base, -0.14);
+  const jambLight = shade(base, 0.04);
+  const cap = fantasy ? fantasyCapColor(style) : capColor(style);
   for (const [a, b] of segs) {
     drawTiled(ctx, a, b, y, WALL_FACE_H, tileFor);
     // Batentes sombreados nas bordas que encostam numa passagem.
@@ -272,7 +281,7 @@ export function drawWallFace(ctx: CanvasRenderingContext2D, x: number, y: number
 }
 
 export function drawWallTop(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, style: WallStyle): void {
-  const cap = capColor(style);
+  const cap = isFantasy() ? fantasyCapColor(style) : capColor(style);
   ctx.fillStyle = cap;
   ctx.fillRect(x, y, w, h);
   ctx.fillStyle = shade(cap, 0.08);
@@ -285,11 +294,14 @@ export function drawWallTop(ctx: CanvasRenderingContext2D, x: number, y: number,
 
 export function drawSouthWall(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, style: WallStyle, opts: { doorways?: Doorway[] } = {}): void {
   const sk = styleKey(style);
+  const fantasy = isFantasy();
   const tileFor = (tx: number) => {
     const col = tx & 3;
-    return tileCache.get(`s|${sk}|${col}`, () => toCanvas(southWallTile(style, col)));
+    return tileCache.get(`${fantasy ? 'sf' : 's'}|${sk}|${col}`, () =>
+      toCanvas(fantasy ? fantasySouthWallTile(style, col) : southWallTile(style, col)),
+    );
   };
-  const cap = capColor(style);
+  const cap = fantasy ? fantasyCapColor(style) : capColor(style);
   for (const [a, b] of solidSegments(x, w, opts.doorways)) {
     drawTiled(ctx, a, b, y, TILE, tileFor);
     if (b < x + w) {
