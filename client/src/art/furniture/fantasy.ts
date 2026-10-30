@@ -2124,6 +2124,135 @@ export function campTable(variant: string | undefined, seed: number): BufFurnitu
   return { base: s };
 }
 
+// ---------------------------------------------------------------- mesa de pedra da masmorra
+/** Pedra lavrada da câmara: cinza-morno, com juntas escuras e ferro nas quinas. */
+const DP = ramp('#55514a', 0.075);
+
+/** Mesa de guerra de PEDRA (2x1): laje maciça sobre dois blocos, ferro nas quinas e entalhe rúnico. */
+export function stoneTable(seed: number): BufFurniture {
+  const s = floorSheet(2, 1, 22);
+  const b = s.buf;
+  const r = rngOf(seed, 71);
+  // Pés: dois blocos de pedra com aresta clara e base na sombra.
+  for (const x of [2, 27]) {
+    b.rect(x, 6, 3, 10, DP.base);
+    b.vline(x, 6, 15, DP.lt);
+    b.vline(x + 2, 6, 15, DP.dk);
+    b.hline(x, x + 2, 15, '#1b1917');
+  }
+  b.hline(4, 27, 11, DP.dk);
+  // Laje: topo claro, saia de pedra e sombra embaixo (vista de cima e de frente).
+  b.rect(-1, -2, 34, 9, DP.base);
+  b.hline(-1, 32, -2, DP.lt);
+  b.hline(-1, 32, -1, DP.lt);
+  b.hline(-1, 32, 6, DP.dk);
+  b.rect(-1, 7, 34, 1, '#231f1b');
+  // Juntas e rebites de ferro nas duas pontas.
+  for (const x of [-1, 30]) {
+    b.rect(x, -2, 3, 9, F.ironDark.base);
+    b.vline(x, -2, 6, F.iron.base);
+    b.set(x + 1, 0, F.iron.lt);
+    b.set(x + 1, 4, F.iron.lt);
+  }
+  // Junta de assentamento no meio da laje (a mesa é feita de duas pedras) + lasca na quina.
+  b.vline(15, -2, 6, DP.dk);
+  b.vline(16, -2, 6, '#211e1a');
+  b.set(15, -2, DP.lt);
+  b.rect(31, -2, 2, 2, DP.dk);
+  b.set(32, -2, '#1e1c19');
+  // Entalhe rúnico no meio da saia + lascas e poeira.
+  b.hline(12, 19, 2, DP.dk);
+  b.set(13, 1, DP.lt);
+  b.set(13, 3, DP.lt);
+  b.set(18, 1, DP.lt);
+  b.set(18, 3, DP.lt);
+  b.hline(12, 19, 4, DP.dk);
+  for (let i = 0; i < 7; i++) b.set(3 + Math.floor(r() * 26), 8 + Math.floor(r() * 2), '#2c2823');
+  // Mapa aberto, vela acesa, caneca de ferro e punhal fincado.
+  scroll(b, 3, -8, 11, 6);
+  b.hline(5, 11, -6, 'rgba(120,40,32,0.55)');
+  b.set(11, -7, F.blood);
+  candle(b, 26, -4, 5, 2);
+  b.rect(20, -6, 4, 5, F.ironDark.base);
+  b.hline(20, 23, -6, F.iron.base);
+  b.vline(21, -11, -7, '#cfd6df');
+  b.hline(20, 22, -7, F.gold);
+  b.outline();
+  underRect(b, 2, 9, 28, 7, 'rgba(16,14,12,0.24)');
+  contact(b, 0, 14, 32, 3, 0.26);
+  return { base: s };
+}
+
+/** A mesma mesa de guerra de pedra vista por trás (quem senta ao norte vê a laje e o entalhe). */
+export function stoneTableBack(seed: number): BufFurniture {
+  const s = floorSheet(2, 1, 16);
+  const b = s.buf;
+  const r = rngOf(seed, 73);
+  for (const x of [2, 27]) {
+    b.rect(x, 6, 3, 10, DP.dk);
+    b.vline(x, 6, 15, DP.base);
+    b.vline(x + 2, 6, 15, '#1d1b18');
+  }
+  // Saia de pedra vista de costas (sem quinas de ferro) e laje por cima.
+  b.rect(1, 7, 30, 8, DP.dk);
+  b.hline(1, 30, 7, DP.base);
+  b.hline(2, 29, 9, DP.base);
+  for (const x of [1, 30]) {
+    b.rect(x, -3, 2, 12, DP.base);
+    b.vline(x, -3, 8, DP.lt);
+  }
+  b.rect(2, -3, 28, 9, DP.base);
+  b.hline(2, 29, -3, DP.lt);
+  b.hline(2, 29, -2, DP.lt);
+  b.hline(2, 29, 5, DP.dk);
+  // Junta das duas pedras e veio de granito.
+  b.vline(16, -3, 5, DP.dk);
+  b.vline(17, -3, 5, '#211e1a');
+  for (let i = 0; i < 6; i++) b.set(4 + Math.floor(r() * 22), 0 + Math.floor(r() * 4), DP.dk);
+  // Brasão/entalhe na laje, pergaminho enrolado, castiçal e moedas.
+  b.rect(12, -1, 8, 4, DP.dk);
+  b.hline(12, 19, -1, '#2a2621');
+  b.set(15, 0, F.gold);
+  b.set(16, 1, F.gold);
+  b.set(16, 2, F.gold);
+  scroll(b, 4, -6, 8, 4);
+  candle(b, 26, -3, 6, 2);
+  for (let i = 0; i < 5; i++) b.set(7 + Math.floor(r() * 20), 6, F.gold);
+  b.outline();
+  underRect(b, 2, 9, 28, 7, 'rgba(16,14,12,0.24)');
+  contact(b, 0, 14, 32, 3, 0.26);
+  return { base: s };
+}
+
+/** Banco de pedra maciço (1x1): bloco gasto no centro, lascado nas quinas, pele de animal em cima. */
+export function stoneStool(seed: number): BufFurniture {
+  const s = floorSheet(1, 1, 8);
+  const b = s.buf;
+  const r = rngOf(seed, 77);
+  // Bloco apoiado no chão (linha 15 = base do tile, 16 = chão).
+  b.rect(2, 6, 12, 10, DP.base);
+  b.vline(2, 6, 15, DP.lt);
+  b.vline(13, 6, 15, DP.dk);
+  b.hline(2, 13, 15, '#1c1a17');
+  b.hline(3, 12, 6, DP.dk);
+  // Assento: laje gasta e côncava, com lascas nas quinas.
+  b.rect(1, 2, 14, 5, DP.lt);
+  b.hline(1, 14, 2, DP.lt);
+  b.hline(2, 13, 3, DP.base);
+  b.hline(3, 12, 4, DP.dk);
+  b.set(1, 5, DP.dk);
+  b.set(14, 5, DP.dk);
+  // Pele de animal dobrada em cima e um cravo de ferro na frente.
+  b.rect(3, 0, 10, 3, F.leather);
+  b.hline(3, 12, 0, '#6b4f39');
+  b.hline(4, 11, 2, '#2e241c');
+  b.set(7, 8, F.iron.lt);
+  for (let i = 0; i < 4; i++) b.set(4 + Math.floor(r() * 8), 11 + Math.floor(r() * 4), DP.dk);
+  b.outline();
+  contact(b, 1, 15, 14, 2, 0.26);
+  return { base: s };
+}
+
 /** Mesa de guerra vista por trás (lugar de trabalho de quem senta ao norte): travessa, maça e lanterna. */
 export function campTableBack(variant: string | undefined, seed: number): BufFurniture {
   const s = floorSheet(2, 1, 16);
@@ -3229,6 +3358,12 @@ export function fantasyBuild(kind: FurnitureKind, variant: string | undefined, s
     // --- acampamento (só existe na skin de fantasia; o layout escolhe estes kinds no campo)
     case 'campfire':
       return campfire(seed);
+    case 'stone_table':
+      return stoneTable(seed);
+    case 'stone_table_back':
+      return stoneTableBack(seed);
+    case 'stone_stool':
+      return stoneStool(seed);
     case 'camp_table':
       return campTable(variant, seed);
     case 'camp_table_back':

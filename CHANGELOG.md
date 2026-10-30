@@ -51,6 +51,10 @@ do meio (0.**3**.0).
   (quadrado, octogonal, cruz, pontas recortadas) e a mesma matéria veste a recepção, os banheiros, a sala de
   armas e o corredor, então o nível inteiro fica diferente de projeto para projeto. O contrato da sala não
   muda: mesmo lote, mesma porta, 6 lugares de trabalho e o miolo do poço sempre livre para o duelo.
+- **Mobília de pedra na câmara de duelo.** As bancadas de madeira do acampamento deram lugar a **mesas de guerra de
+  pedra lavrada** (laje em duas pedras, quinas de ferro com rebites, entalhe rúnico, mapa, vela e punhal) e a **bancos
+  de pedra maciços** com assento gasto e pele de animal — nada mais parece móvel de escritório nem de acampamento
+  dentro da masmorra. O banco senta no **meio exato** da mesa (teste garante o alinhamento em pixels).
 - **Nomes escolhidos para os agentes do Hermes** (`hermes-names.json`). Dois campos opcionais na pasta de dados do
   Habblaud: **`pool`** (estoque de nomes: cada agente novo, principal ou subagente, recebe um nome sorteado entre os
   ainda livres; esgotado, volta ao sorteio) e **`names`** (nome fixo por session id, que ganha do estoque). O arquivo é relido

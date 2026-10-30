@@ -230,7 +230,11 @@ export type FurnitureKind =
   | 'crystal_shard' // 1x1 aglomerado de cristais brilhantes (caverna de cristal). rects.glow = brilho.
   | 'ice_spike' // 1x1 estalagmite de gelo (caverna de gelo).
   | 'lava_pool' // 2x1 poça de lava com crosta de pedra (forja vulcânica). rects.glow = brilho.
-  | 'web_wall'; // 1 tile (parede). Teia de aranha grande (covil de aranhas, cripta abandonada).
+  | 'web_wall' // 1 tile (parede). Teia de aranha grande (covil de aranhas, cripta abandonada).
+  // --- mobília da câmara de duelo (pedra e ferro no lugar da madeira do acampamento)
+  | 'stone_table' // 2x1 mesa de guerra de pedra lavrada (lugar de trabalho, frente).
+  | 'stone_table_back' // 2x1 a mesma mesa vista por trás (par da stone_table).
+  | 'stone_stool'; // 1x1 banco de pedra maciço com assento gasto.
 
 export interface FurnitureDef {
   mount: 'floor' | 'wall';
@@ -340,6 +344,9 @@ export const FURNITURE: Readonly<Record<FurnitureKind, FurnitureDef>> = {
   ice_spike: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
   lava_pool: { mount: 'floor', footprint: { w: 2, h: 1 }, blocks: true },
   web_wall: { mount: 'wall', footprint: { w: 1, h: 0 }, blocks: false },
+  stone_table: { mount: 'floor', footprint: { w: 2, h: 1 }, blocks: true },
+  stone_table_back: { mount: 'floor', footprint: { w: 2, h: 1 }, blocks: true },
+  stone_stool: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: false, seat: true },
 };
 
 export type FloorKind =

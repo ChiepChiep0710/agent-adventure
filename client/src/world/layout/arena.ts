@@ -172,10 +172,12 @@ export function layoutProjectArena(room: RoomInput, theme: RoomTheme): AreaLayou
   const ranks = [2, 0, 4];
   for (let i = 0; i < 3; i++) {
     const lx = 2 + i * 2;
-    const back = furn('camp_table_back', lx, 2, deskV, { order: 0.2 + i * 0.02, seat: `N${i}` });
-    const front = furn('camp_table', lx, 7, deskV, { order: 0.3 + i * 0.02, seat: `S${i}` });
-    seat('desk', 'stool', lx, 3, 'down', chairV, { dx: TILE / 2, deskId: back, rank: ranks[i] + 1, side: 'N', order: 0.55 + i * 0.03 });
-    seat('desk', 'stool', lx, 8, 'up', chairV, { dx: TILE / 2, deskId: front, rank: ranks[i], side: 'S', order: 0.6 + i * 0.03 });
+    // mesa de guerra de PEDRA (nada de madeira de acampamento dentro da câmara)
+    // a mesa de 2 tiles é puxada meio tile para a esquerda, assim o banco de 1 tile fica no MEIO dela
+    const back = furn('stone_table_back', lx, 2, undefined, { dx: -TILE / 2, order: 0.2 + i * 0.02, seat: `N${i}` });
+    const front = furn('stone_table', lx, 7, undefined, { dx: -TILE / 2, order: 0.3 + i * 0.02, seat: `S${i}` });
+    seat('desk', 'stone_stool', lx, 3, 'down', undefined, { deskId: back, rank: ranks[i] + 1, side: 'N', order: 0.55 + i * 0.03 });
+    seat('desk', 'stone_stool', lx, 8, 'up', undefined, { deskId: front, rank: ranks[i], side: 'S', order: 0.6 + i * 0.03 });
   }
 
   // ---- quadro de missões: os agentes leem as missões no quadro da parede
@@ -189,8 +191,8 @@ export function layoutProjectArena(room: RoomInput, theme: RoomTheme): AreaLayou
   // Tudo longe do miolo: o poço e a volta das mesas de guerra ficam livres para a luta.
   const bench = furn('bench_stone', 11, 2, undefined, { order: 0.22 });
   for (let i = 0; i < 2; i++) seat('stool', 'bench_stone', 11 + i, 2, 'down', undefined, { noFurniture: true, furnitureId: bench, order: 0.62 + i * 0.02 });
-  seat('stool', 'stump', 14, 2, 'left', chairV, { order: 0.64 });
-  seat('stool', 'stump', 1, 2, 'right', chairV, { order: 0.65 });
+  seat('stool', 'stone_stool', 14, 2, 'left', undefined, { order: 0.64 });
+  seat('stool', 'stone_stool', 1, 2, 'right', undefined, { order: 0.65 });
 
   // ---- armaria do duelo (sempre) + o cenário do bioma nas bordas
   furn('weapon_rack', 1, 10, undefined, { order: 0.26 });

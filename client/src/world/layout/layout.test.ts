@@ -288,10 +288,10 @@ describe('arena da masmorra (skin de fantasia)', () => {
     expect(a.walls.some((w) => w.kind === 'south')).toBe(true);
     // 6 mesas de guerra (3 de cada lado do poço), a armaria do duelo e o cenário do bioma
     const fk = new Set(a.furniture.map((f) => f.kind));
-    for (const k of ['camp_table', 'camp_table_back', 'brazier', 'weapon_rack', 'armor_stand', 'bench_stone'] as const) {
+    for (const k of ['stone_table', 'stone_table_back', 'brazier', 'weapon_rack', 'armor_stand', 'bench_stone'] as const) {
       expect(fk.has(k), k).toBe(true);
     }
-    expect(a.furniture.filter((f) => f.kind === 'camp_table' || f.kind === 'camp_table_back')).toHaveLength(6);
+    expect(a.furniture.filter((f) => f.kind === 'stone_table' || f.kind === 'stone_table_back')).toHaveLength(6);
     expect(a.furniture.some((f) => v.biome.props.includes(f.kind)), `cenário do bioma ${v.biome.id}`).toBe(true);
     expect(a.furniture.some((f) => f.kind === 'chest' || f.kind === 'cage')).toBe(true);
     // itens de parede: grade levadiça, corrente, tochas, estandartes do tema e as marcas do bioma
@@ -299,6 +299,22 @@ describe('arena da masmorra (skin de fantasia)', () => {
     for (const k of ['portcullis', 'chain', 'wall_torch', 'banner'] as const) expect(wk, k).toContain(k);
     for (const k of v.biome.wallProps) expect(wk, k).toContain(k);
     expect(a.wallItems.filter((w) => w.kind === 'banner' && w.variant !== undefined)).toHaveLength(2);
+  });
+
+  it('cada banco senta no meio da sua mesa de pedra (nada de herói no canto da mesa)', () => {
+    for (const seed of [7, 99, 4242]) {
+      const a = arena(0, seed);
+      const desks = a.spots.filter((sp) => sp.kind === 'desk');
+      expect(desks.length).toBe(6);
+      for (const sp of desks) {
+        const table = a.furniture.find((it) => it.id === sp.deskId)!;
+        expect(table, `${sp.id} sem mesa`).toBeTruthy();
+        const def = FURNITURE[table.kind];
+        expect(def.footprint.w, sp.id).toBe(2);
+        const center = table.tx * TILE + (table.dx ?? 0) + (def.footprint.w * TILE) / 2;
+        expect(Math.abs(sp.tx * TILE + TILE / 2 - center), `${sp.id} fora do meio da mesa`).toBeLessThanOrEqual(1);
+      }
+    }
   });
 
   it('o miolo do poço fica livre e caminhável (4x3 no meio da arena)', () => {
@@ -487,7 +503,7 @@ describe('biomas da masmorra: cada câmara nasce num clima diferente', () => {
     for (const bio of DUNGEON_BIOMES) {
       const seed = Array.from({ length: 500 }, (_, i) => (i * 104729 + 11) >>> 0).find((sd) => dungeonBiome(sd, 1).id === bio.id)!;
       const a = layoutProjectArena({ id: `/p/${bio.id}`, slot: 0, seed }, dungeonTheme);
-      expect(a.furniture.filter((f) => f.kind === 'camp_table' || f.kind === 'camp_table_back')).toHaveLength(6);
+      expect(a.furniture.filter((f) => f.kind === 'stone_table' || f.kind === 'stone_table_back')).toHaveLength(6);
       const kinds = new Set(a.floors.map((f) => f.kind));
       expect(kinds.has(bio.base), bio.id).toBe(true);
       expect(kinds.has(bio.pit), bio.id).toBe(true);

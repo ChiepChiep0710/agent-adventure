@@ -193,6 +193,12 @@ function build(kind: FurnitureKind, variant: string | undefined, state: number, 
       return O.meetingTable(seed);
     case 'web_wall':
       return W.poster('code');
+    case 'stone_table':
+      return O.desk(variant, seed);
+    case 'stone_table_back':
+      return O.deskBack(variant, seed);
+    case 'stone_stool':
+      return O.stool();
   }
 }
 

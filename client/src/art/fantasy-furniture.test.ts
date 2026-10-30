@@ -24,6 +24,7 @@ const REPLACED: FurnitureKind[] = [
 /** Props dos biomas da masmorra (cada câmara tem um clima próprio). */
 const DUNGEON: FurnitureKind[] = [
   'sarcophagus', 'bone_pile', 'mushroom_cluster', 'crystal_shard', 'ice_spike', 'lava_pool', 'web_wall',
+  'stone_table', 'stone_table_back', 'stone_stool',
 ];
 
 /** Kinds só das câmaras de fantasia (sem equivalente no escritório): só precisam renderizar na fantasia. */
