@@ -1,4 +1,6 @@
 // Corredor que atravessa o prédio de oeste a leste, com bebedouros, bancos e plantas.
+// Na skin de fantasia vira a estrada de terra que liga os acampamentos, com grama nas bordas.
+import { isFantasy } from '../../art/skin';
 import { COL_W, CORE_COLS, CORRIDOR_H, CORRIDOR_Y } from '../constants';
 import { AreaBuilder } from './builder';
 import type { AreaLayout } from './types';
@@ -13,7 +15,13 @@ const RUNNERS = ['#8b9bb0', '#8597ab', '#909fb3'] as const;
 export function layoutCorridor(cols: number): AreaLayout {
   const w = cols * COL_W;
   const b = new AreaBuilder(CORRIDOR_ID, 'corridor', { x: 0, y: CORRIDOR_Y, w, h: CORRIDOR_H });
-  b.floor('concrete', 0, 0, w, CORRIDOR_H, 501);
+  const fan = isFantasy();
+  // fantasia: estrada de terra batida entre os acampamentos, com grama nas duas margens
+  b.floor(fan ? 'sidewalk' : 'concrete', 0, 0, w, CORRIDOR_H, 501);
+  if (fan) {
+    b.floor('grass', 0, 0, w, 1, 503);
+    b.floor('grass', 0, CORRIDOR_H - 1, w, 1, 504);
+  }
   // fachadas de vidro nas pontas do corredor (entrada principal a oeste)
   for (let ly = 0; ly < CORRIDOR_H; ly++) {
     b.furn('glass_partition', 0, ly, ly === 0 || ly === CORRIDOR_H - 1 ? 'end' : 'v', { order: 0.1 });

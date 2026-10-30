@@ -127,6 +127,33 @@ function build(kind: FurnitureKind, variant: string | undefined, state: number, 
       return C.receptionDesk(seed);
     case 'bench':
       return C.bench();
+    // Móveis que só existem no acampamento da skin de fantasia (o escritório nunca os usa):
+    // ficam com um móvel equivalente do escritório, do mesmo footprint, para o switch ser total.
+    case 'campfire':
+      return C.toiletStall(0);
+    case 'camp_table':
+      return O.desk('wood', 0);
+    case 'camp_table_back':
+      return O.deskBack('wood', 0);
+    case 'stump':
+    case 'log_seat':
+      return O.stool();
+    case 'tent':
+      return O.meetingTable(0);
+    case 'quest_board':
+      return O.bookshelf(0);
+    case 'bedroll':
+      return C.beanbag('red');
+    case 'crate':
+      return O.filingCabinet();
+    case 'barrel':
+      return C.fridge();
+    case 'camp_tree':
+      return O.plantTall('palm', 0);
+    case 'camp_bush':
+      return O.plantSmall('fern', 0);
+    case 'lantern_post':
+      return O.floorLamp();
   }
 }
 

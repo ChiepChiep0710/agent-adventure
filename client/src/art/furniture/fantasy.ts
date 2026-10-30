@@ -1891,7 +1891,455 @@ export function elevator(state: number): BufFurniture {
   return { base: s };
 }
 
-// ------------------------------------------------------------------ despacho
+// ------------------------------------------------------------------ acampamento de aventureiros
+
+/** Verdes, madeira queimada e pedra da clareira. */
+const CAMP = {
+  leaf: '#4f8a44',
+  leafLt: '#6faa53',
+  leafDk: '#356334',
+  pine: '#2b4f31',
+  pineLt: '#457a4a',
+  bark: '#5a4130',
+  barkLt: '#7a5a40',
+  barkDk: '#3d2c1f',
+  ash: '#3b342e',
+  ashLt: '#544a41',
+} as const;
+
+/** Lonas das barracas por variante (o layout escolhe a cor a partir do tema da sala). */
+const TENT_MATS: Readonly<Record<string, Ramp>> = {
+  red: ramp('#b4463a', 0.07),
+  blue: ramp('#3f5d8a', 0.07),
+  green: ramp('#4a7a4e', 0.07),
+  gold: ramp('#c08a3a', 0.07),
+  violet: ramp('#6a4a8e', 0.07),
+  teal: ramp('#3f8a8a', 0.07),
+};
+
+/** Manta/cor de tecido das barracas e sacos de dormir. */
+const BLANKET: Readonly<Record<string, string>> = {
+  red: '#a8433a',
+  blue: '#3f5d8a',
+  green: '#4a7a4e',
+  gold: '#c08a3a',
+};
+
+/** Fogueira 2x2: clareira de cinzas, anel de pedras, lenha cruzada e chamas. */
+export function campfire(seed: number): BufFurniture {
+  const s = floorSheet(2, 2, 22);
+  const b = s.buf;
+  const r = rngOf(seed, 21);
+  b.ellipse(16, 25, 13, 6.5, '#40382f');
+  b.ellipse(16, 25, 9.5, 4.4, CAMP.ash);
+  b.ellipse(16, 25, 6, 2.6, CAMP.ashLt);
+  // Brasas espalhadas.
+  for (let i = 0; i < 12; i++) {
+    const a = r() * Math.PI * 2;
+    const d = 1 + r() * 7;
+    b.set(Math.round(16 + Math.cos(a) * d), Math.round(25 + Math.sin(a) * d * 0.5), ['#ff8a3c', '#ffb648', '#e0602a'][i % 3]);
+  }
+  // Anel de pedras (topo claro, base na sombra).
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const sx = Math.round(16 + Math.cos(a) * 13);
+    const sy = Math.round(25 + Math.sin(a) * 6.2);
+    const w = 3 + Math.floor(r() * 2);
+    const h = 2 + Math.floor(r() * 2);
+    const x0 = sx - Math.floor(w / 2);
+    b.rect(x0, sy - h + 1, w, h, F.stone.base);
+    b.hline(x0, x0 + w - 1, sy - h + 1, F.stone.lt);
+    b.hline(x0, x0 + w - 1, sy, F.stone.dk);
+  }
+  // Lenha cruzada, com casca e anéis nas pontas.
+  b.line(10, 24, 22, 20, CAMP.bark, 3);
+  b.line(10, 21, 22, 25, CAMP.barkDk, 3);
+  b.line(11, 23, 21, 19, CAMP.barkLt, 1);
+  b.set(22, 20, '#c9a06a');
+  b.set(22, 25, '#b98f5a');
+  // Chamas (a maior no centro).
+  flame(b, 16, 22, 9);
+  flame(b, 12, 23, 5);
+  flame(b, 20, 23, 6);
+  // Fumaça subindo.
+  for (const [sx, sy] of [[15, 8], [18, 5], [14, 3]] as const) b.set(sx, sy, 'rgba(196,196,206,0.20)');
+  b.outline();
+  contact(b, 3, 30, 26, 4, 0.24);
+  s.rects = { glow: rectAt(s, 11, 13, 10, 10) };
+  return { base: s };
+}
+
+/** Barraca A-frame 3x2: lona em duas águas, aba de entrada escura, cordas e estacas. */
+export function tent(variant: string | undefined, seed: number): BufFurniture {
+  const m = TENT_MATS[variant ?? 'red'] ?? TENT_MATS.red;
+  const s = floorSheet(3, 2, 30);
+  const b = s.buf;
+  const r = rngOf(seed, 33);
+  const cx = 24;
+  const apex = 7;
+  const baseY = 31;
+  b.ellipse(cx, baseY - 1, 22, 4.5, 'rgba(28,32,52,0.22)');
+  // Cordas e estacas.
+  b.line(cx - 4, apex + 2, 2, baseY, 'rgba(226,214,186,0.65)');
+  b.line(cx + 4, apex + 2, 46, baseY, 'rgba(226,214,186,0.55)');
+  for (const px of [1, 46]) {
+    b.rect(px, baseY - 2, 2, 3, CAMP.barkDk);
+    b.set(px, baseY - 3, CAMP.barkLt);
+  }
+  // Duas águas da lona: esquerda na luz, direita na sombra.
+  for (let y = apex; y <= baseY; y++) {
+    const t = (y - apex) / (baseY - apex);
+    const half = Math.round(2 + t * 21);
+    b.hline(cx - half, cx - 1, y, m.base);
+    b.hline(cx + 1, cx + half, y, shade(m.base, -0.14));
+    b.set(cx - half, y, m.hi);
+    b.set(cx - half + 1, y, m.lt);
+    b.set(cx + half, y, m.dd);
+    if (y % 9 === 0) {
+      // costura entre panos de lona
+      b.hline(cx - half, cx - 2, y, m.dk);
+      b.hline(cx + 2, cx + half, y, shade(m.base, -0.2));
+    }
+  }
+  // Cumeeira iluminada.
+  b.vline(cx - 1, apex, baseY, m.hi);
+  b.vline(cx, apex, baseY, m.lt);
+  // Entrada: vão escuro com as abas dobradas para os lados.
+  for (let y = 17; y <= baseY; y++) {
+    const t = (y - 17) / (baseY - 17);
+    const half = Math.max(1, Math.round(t * 9));
+    b.hline(cx - half, cx + half, y, t < 0.3 ? '#241d18' : '#33291f');
+  }
+  b.line(cx - 10, baseY, cx - 5, 16, m.lt);
+  b.line(cx - 9, baseY, cx - 4, 16, m.base);
+  b.line(cx + 10, baseY, cx + 5, 16, m.dk);
+  b.line(cx + 9, baseY, cx + 4, 16, shade(m.base, -0.22));
+  // Amarração das abas e bandeirola na ponta.
+  b.set(cx - 6, 22, F.gold);
+  b.set(cx + 6, 22, F.gold);
+  b.vline(cx, apex - 4, apex, CAMP.barkDk);
+  for (let i = 0; i < 3; i++) b.hline(cx + 1, cx + 1 + (3 - i), apex - 4 + i, i === 0 ? F.gold : shade(F.gold, -0.15));
+  // Remendos e furos da lona gasta.
+  for (let i = 0; i < 4; i++) {
+    const px = 6 + Math.floor(r() * 34);
+    const py = 12 + Math.floor(r() * 18);
+    b.set(px, py, m.dk);
+  }
+  b.outline();
+  contact(b, 2, baseY - 2, 44, 3, 0.2);
+  return { base: s };
+}
+
+/** Toco de árvore 1x1 usado como lugar à mesa (almofada de tecido no topo). */
+export function stump(variant: string | undefined): BufFurniture {
+  const c = cushionRamp(variant);
+  const s = floorSheet(1, 1, 10);
+  const b = s.buf;
+  b.ellipse(8, 15.2, 6.5, 1.8, 'rgba(28,32,52,0.26)');
+  // Casca e raízes.
+  for (let y = 6; y <= 15; y++) {
+    const inset = y > 13 ? 2 : 1;
+    b.hline(3 - (y > 12 ? 1 : 0), 12 + inset - 1, y, CAMP.bark);
+    b.set(3 - (y > 12 ? 1 : 0), y, CAMP.barkLt);
+    b.set(12 + inset - 1, y, CAMP.barkDk);
+  }
+  for (const [x, y] of [[2, 14], [13, 14], [4, 15], [11, 15]] as const) b.set(x, y, CAMP.barkDk);
+  // Topo cortado com anéis de crescimento.
+  b.ellipse(8, 6.5, 5.6, 2.8, CAMP.barkLt);
+  b.ellipse(8, 6.2, 5, 2.4, '#c9a06a');
+  b.ellipse(8, 6.2, 3.4, 1.5, '#b98f5a');
+  b.ellipse(8, 6.2, 1.8, 0.9, '#c9a06a');
+  // Almofada de tecido dobrada.
+  b.rect(5, 3, 6, 3, c.base);
+  b.hline(5, 10, 3, c.lt);
+  b.hline(5, 10, 5, c.dd);
+  b.set(5, 3, c.hi);
+  // Musgo na base.
+  b.set(3, 12, CAMP.leafDk);
+  b.set(12, 11, CAMP.leaf);
+  b.outline();
+  return { base: s };
+}
+
+/** Tronco deitado 1x1: banqueta rústica da fogueira. */
+export function logSeat(): BufFurniture {
+  const s = floorSheet(1, 1, 8);
+  const b = s.buf;
+  b.ellipse(8, 15, 7, 1.8, 'rgba(28,32,52,0.26)');
+  for (let y = 5; y <= 14; y++) {
+    const bulge = y === 5 || y === 14 ? 1 : 0;
+    b.hline(1 + bulge, 14 - bulge, y, CAMP.bark);
+    b.hline(2, 13, y, y < 8 ? CAMP.barkLt : CAMP.bark);
+    b.set(1 + bulge, y, CAMP.barkLt);
+    b.set(14 - bulge, y, CAMP.barkDk);
+  }
+  // Anéis na ponta cortada (oeste).
+  b.ellipse(2.5, 9.5, 1.6, 4.2, '#b98f5a');
+  b.ellipse(2.5, 9.5, 0.9, 2.4, '#c9a06a');
+  // Fendas e musgo sobre a casca.
+  b.hline(6, 10, 8, CAMP.barkDk);
+  b.hline(5, 9, 11, CAMP.barkDk);
+  for (const [x, y] of [[6, 6], [10, 7], [8, 13]] as const) b.set(x, y, CAMP.leafDk);
+  b.outline();
+  return { base: s };
+}
+
+/** Bancada de artesão 2x1 (lugar de trabalho de quem senta ao sul): tampa, ferramentas e vela. */
+export function campTable(variant: string | undefined, seed: number): BufFurniture {
+  const s = floorSheet(2, 1, 20);
+  const b = s.buf;
+  const m = woodMats(variant);
+  const r = rngOf(seed, 41);
+  for (const x of [1, 28]) {
+    b.rect(x, 7, 3, 9, m.legs.base);
+    b.vline(x, 7, 15, m.legs.lt);
+    b.vline(x + 2, 7, 15, m.legs.dk);
+  }
+  b.hline(2, 29, 12, F.oakDark.base);
+  woodTop(b, -1, -3, 34, 12, m.top, seed);
+  // Machadinha cravada, pedra de amolar, cavacos e caneca.
+  b.rect(8, -10, 2, 8, CAMP.barkLt);
+  b.rect(6, -12, 6, 3, F.iron.base);
+  b.hline(6, 11, -12, F.iron.lt);
+  b.hline(7, 10, -9, F.iron.dk);
+  b.rect(7, -9, 4, 1, F.ironDark.dk);
+  b.rect(22, -6, 7, 3, '#8d877d');
+  b.hline(22, 28, -6, '#a8a29a');
+  b.rect(19, -5, 3, 3, m.edge.base);
+  b.set(19, -5, m.edge.lt);
+  for (let i = 0; i < 6; i++) b.set(14 + Math.floor(r() * 8), -2 - Math.floor(r() * 2), '#c9a06a');
+  candle(b, 30, -3, 5, 2);
+  scroll(b, 2, -4, 6, 3);
+  b.outline();
+  underRect(b, 2, 8, 28, 8, 'rgba(30,26,20,0.18)');
+  contact(b, 0, 14, 32, 3, 0.22);
+  return { base: s };
+}
+
+/** Bancada vista por trás (lugar de trabalho de quem senta ao norte): travessa e ferramentas baixas. */
+export function campTableBack(variant: string | undefined, seed: number): BufFurniture {
+  const s = floorSheet(2, 1, 16);
+  const b = s.buf;
+  const m = woodMats(variant);
+  const r = rngOf(seed, 43);
+  for (const x of [1, 28]) {
+    b.rect(x, 6, 3, 10, m.legs.base);
+    b.vline(x, 6, 15, m.legs.lt);
+    b.vline(x + 2, 6, 15, m.legs.dk);
+  }
+  frontFace(b, 2, 8, 28, 7, m.edge);
+  b.hline(2, 29, 8, m.edge.dk);
+  b.hline(3, 28, 10, m.edge.lt);
+  woodTop(b, -1, -5, 34, 12, m.top, seed);
+  // Vigas empilhadas, mapa enrolado e lanterna acesa.
+  b.rect(3, -8, 12, 3, CAMP.barkLt);
+  b.hline(3, 14, -8, '#8f6a45');
+  b.hline(3, 14, -6, CAMP.barkDk);
+  for (let i = 0; i < 3; i++) b.set(4 + i * 4, -6, CAMP.bark);
+  scroll(b, 18, -7, 8, 4);
+  b.rect(28, -10, 3, 6, F.iron.base);
+  b.rect(28, -12, 3, 2, '#ffd98a');
+  b.set(29, -11, F.flameHot);
+  for (let i = 0; i < 5; i++) b.set(6 + Math.floor(r() * 22), -1, '#c9a06a');
+  b.outline();
+  underRect(b, 2, 9, 28, 7, 'rgba(30,26,20,0.18)');
+  contact(b, 0, 14, 32, 3, 0.22);
+  return { base: s };
+}
+
+/** Quadro de missões 2x1 em dois postes: pergaminhos pregados, sinete e adaga. */
+export function questBoard(seed: number): BufFurniture {
+  const s = floorSheet(2, 1, 27);
+  const b = s.buf;
+  const r = rngOf(seed, 47);
+  // Postes.
+  for (const x of [2, 27]) {
+    b.rect(x, -17, 3, 32, F.oakDark.base);
+    b.vline(x, -17, 14, F.oakDark.lt);
+    b.vline(x + 2, -17, 14, F.oakDark.dd);
+    b.hline(x, x + 2, 14, CAMP.barkDk);
+  }
+  // Telhadinho de ardósia sobre o quadro.
+  for (let i = 0; i < 4; i++) {
+    const inset = 4 - i;
+    b.hline(-1 + inset, 33 - inset, -21 + i, i === 0 ? '#6a6f78' : i === 3 ? '#33373e' : '#4d525a');
+  }
+  // Tábua de missões.
+  b.rect(1, -17, 30, 17, F.oakDark.base);
+  b.hline(1, 30, -17, F.oakDark.lt);
+  b.hline(1, 30, 0, F.oakDark.dd);
+  for (const y of [-12, -7, -2]) b.hline(2, 29, y, F.oakDark.dk);
+  // Pergaminhos pregados (um com sinete de cera, outro rasgado).
+  const sheets: readonly [number, number, number, number][] = [
+    [4, -16, 8, 8],
+    [14, -15, 7, 9],
+    [23, -14, 6, 7],
+    [4, -7, 9, 6],
+    [16, -8, 10, 7],
+  ];
+  for (const [x, y, w, h] of sheets) {
+    b.rect(x, y, w, h, F.parch);
+    b.hline(x, x + w - 1, y, '#f4e9c9');
+    b.hline(x, x + w - 1, y + h - 1, F.parchDark);
+    for (let i = 1; i < h - 1; i += 2) b.hline(x + 1, x + w - 2 - (Math.floor(r() * 3)), y + i, 'rgba(120,100,70,0.55)');
+    b.set(x + 1 + Math.floor(r() * (w - 2)), y, F.ironDark.base);
+  }
+  // Sinete vermelho e adaga de ferro cravada no canto.
+  b.rect(14, -15, 2, 2, '#a8352f');
+  b.set(15, -15, '#d05a48');
+  b.vline(26, -13, -7, F.iron.base);
+  b.rect(25, -15, 3, 3, F.iron.lt);
+  b.hline(24, 27, -12, F.ironDark.dk);
+  b.outline();
+  contact(b, 1, 13, 30, 3, 0.22);
+  return { base: s };
+}
+
+/** Saco de dormir 1x1 (assento): manta listrada, travesseiro e cordas. */
+export function bedroll(variant: string | undefined): BufFurniture {
+  const base = BLANKET[variant ?? 'red'] ?? BLANKET.red;
+  const m = ramp(base, 0.07);
+  const s = floorSheet(1, 1, 8);
+  const b = s.buf;
+  b.ellipse(8, 14.5, 6.5, 2, 'rgba(28,32,52,0.24)');
+  // Manta enrolada no chão.
+  for (let y = 4; y <= 14; y++) {
+    const inset = y === 4 || y === 14 ? 1 : 0;
+    b.hline(2 + inset, 13 - inset, y, y < 7 ? m.base : m.dk);
+  }
+  b.hline(3, 12, 4, m.lt);
+  b.hline(3, 12, 5, m.hi);
+  // Listras do tecido.
+  for (const y of [8, 11]) b.hline(3, 12, y, shade(base, 0.16));
+  // Travesseiro na cabeceira.
+  b.rect(4, 2, 8, 3, '#e8dcbe');
+  b.hline(4, 11, 2, '#f4ecd6');
+  b.hline(4, 11, 4, '#c8b995');
+  // Cordas e dobra.
+  b.vline(6, 6, 13, '#8a6a46');
+  b.vline(10, 6, 13, '#8a6a46');
+  b.set(6, 6, '#c9a06a');
+  b.set(10, 6, '#c9a06a');
+  b.outline();
+  return { base: s };
+}
+
+/** Caixote de suprimentos 1x1: tábuas, travessa em X e saco em cima. */
+export function crate(): BufFurniture {
+  const s = floorSheet(1, 1, 12);
+  const b = s.buf;
+  b.ellipse(8, 15, 6.5, 1.6, 'rgba(28,32,52,0.24)');
+  b.rect(2, 1, 12, 14, F.oldWood.base);
+  b.hline(2, 13, 1, F.oldWood.lt);
+  b.vline(2, 1, 14, F.oldWood.lt);
+  b.vline(13, 1, 14, F.oldWood.dk);
+  b.hline(2, 13, 14, F.oldWood.dk);
+  for (const x of [5, 8, 11]) b.vline(x, 2, 13, F.oakDark.base);
+  b.line(3, 3, 12, 12, F.oakDark.dk);
+  b.line(12, 3, 3, 12, F.oakDark.dk);
+  for (const [x, y] of [[3, 2], [12, 2], [3, 13], [12, 13]] as const) b.set(x, y, F.iron.base);
+  // Saco de estopa e corda em cima.
+  b.ellipse(9, 1, 4, 2.4, '#c9a06a');
+  b.hline(6, 12, 1, '#e0c58e');
+  b.set(7, -1, '#8a6a46');
+  b.set(11, -1, '#8a6a46');
+  b.outline();
+  return { base: s };
+}
+
+/** Barril 1x1 com aros de ferro (suprimentos do acampamento). */
+export function barrelItem(): BufFurniture {
+  const s = floorSheet(1, 1, 14);
+  const b = s.buf;
+  b.ellipse(8, 15, 6.5, 1.6, 'rgba(28,32,52,0.24)');
+  barrel(b, 3, 1, 10, 14);
+  b.outline();
+  return { base: s };
+}
+
+/** Árvore do acampamento 1x1: pinheiro em camadas ou carvalho de copa redonda. */
+export function campTree(variant: string | undefined): BufFurniture {
+  const pine = variant !== 'oak';
+  const s = floorSheet(1, 1, 42);
+  const b = s.buf;
+  b.ellipse(8, 15, 6.5, 2, 'rgba(28,32,52,0.26)');
+  // Tronco.
+  b.rect(7, 2, 3, 14, CAMP.bark);
+  b.vline(7, 2, 15, CAMP.barkLt);
+  b.vline(9, 2, 15, CAMP.barkDk);
+  if (pine) {
+    const layers: readonly [number, number, number][] = [
+      [-28, -18, 5],
+      [-21, -11, 8],
+      [-14, -3, 11],
+    ];
+    for (const [apexY, baseY, half] of layers) {
+      for (let y = apexY; y <= baseY; y++) {
+        const t = (y - apexY) / (baseY - apexY);
+        const w = Math.max(1, Math.round(t * half));
+        b.hline(8 - w, 8 + w, y, t > 0.7 ? CAMP.pine : CAMP.leafDk);
+        b.set(8 - w, y, CAMP.pineLt);
+        b.set(8 + w, y, '#22422a');
+      }
+    }
+    b.set(8, -30, CAMP.leafDk);
+  } else {
+    b.ellipse(8, -16, 9, 8, CAMP.leafDk);
+    b.ellipse(4, -9, 5, 4.4, CAMP.leafDk);
+    b.ellipse(12, -9, 5, 4.4, CAMP.pine);
+    b.ellipse(8, -19, 6.5, 5, CAMP.leaf);
+    b.ellipse(6, -21, 3.4, 2.6, CAMP.leafLt);
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2;
+      b.set(Math.round(8 + Math.cos(a) * 7), Math.round(-16 + Math.sin(a) * 7.4), i % 3 === 0 ? CAMP.leafLt : '#2a4a2c');
+    }
+  }
+  b.outline();
+  return { base: s };
+}
+
+/** Arbusto 1x1 com frutinhas (borda do acampamento). */
+export function campBush(variant: string | undefined): BufFurniture {
+  const s = floorSheet(1, 1, 14);
+  const b = s.buf;
+  b.ellipse(8, 14.5, 6.5, 2, 'rgba(28,32,52,0.22)');
+  b.ellipse(8, 9, 6.5, 5.5, CAMP.leafDk);
+  b.ellipse(4.5, 11, 3.6, 3, CAMP.pine);
+  b.ellipse(11.5, 11, 3.6, 3, CAMP.pine);
+  b.ellipse(8, 7, 4.6, 3.4, CAMP.leaf);
+  b.ellipse(6.5, 5.5, 2, 1.6, CAMP.leafLt);
+  // Frutinhas ou flores.
+  const dots: readonly [number, number][] = [[5, 8], [10, 7], [7, 11], [12, 10]];
+  for (let i = 0; i < dots.length; i++) b.set(dots[i][0], dots[i][1], variant === 'flower' ? (i % 2 ? '#f4e36a' : '#f5f1e6') : '#c04a42');
+  b.outline();
+  return { base: s };
+}
+
+/** Poste com lanterna 1x1: é onde se "acende" o acampamento (spot 'switch'). */
+export function lanternPost(): BufFurniture {
+  const s = floorSheet(1, 1, 26);
+  const b = s.buf;
+  b.ellipse(8, 15, 5.5, 1.8, 'rgba(28,32,52,0.24)');
+  b.rect(7, -20, 2, 35, CAMP.bark);
+  b.vline(7, -20, 14, CAMP.barkLt);
+  b.vline(8, -20, 14, CAMP.barkDk);
+  // Braço de ferro e argola.
+  b.hline(4, 8, -20, F.iron.base);
+  b.set(4, -20, F.iron.lt);
+  b.vline(4, -19, -17, F.iron.base);
+  // Lanterna: armação de ferro e vidro quente.
+  b.rect(2, -17, 5, 7, F.ironDark.base);
+  b.rect(3, -16, 3, 5, '#ffd98a');
+  b.set(4, -15, F.flameHot);
+  b.hline(2, 6, -12, F.iron.base);
+  b.hline(2, 6, -18, F.iron.base);
+  b.set(4, -18, F.iron.lt);
+  // Base de pedras.
+  b.ellipse(8, 14, 4, 1.6, F.stone.base);
+  b.outline();
+  s.rects = { glow: rectAt(s, 2, -18, 6, 7) };
+  return { base: s };
+}
 
 /** Móvel de fantasia do kind, ou undefined quando o kind não tem versão de fantasia. */
 export function fantasyBuild(kind: FurnitureKind, variant: string | undefined, state: number, seed: number): BufFurniture | undefined {
@@ -1988,6 +2436,33 @@ export function fantasyBuild(kind: FurnitureKind, variant: string | undefined, s
       return lightSwitch(variant);
     case 'elevator':
       return elevator(state);
+    // --- acampamento (só existe na skin de fantasia; o layout escolhe estes kinds no campo)
+    case 'campfire':
+      return campfire(seed);
+    case 'camp_table':
+      return campTable(variant, seed);
+    case 'camp_table_back':
+      return campTableBack(variant, seed);
+    case 'stump':
+      return stump(variant);
+    case 'log_seat':
+      return logSeat();
+    case 'tent':
+      return tent(variant, seed);
+    case 'quest_board':
+      return questBoard(seed);
+    case 'bedroll':
+      return bedroll(variant);
+    case 'crate':
+      return crate();
+    case 'barrel':
+      return barrelItem();
+    case 'camp_tree':
+      return campTree(variant);
+    case 'camp_bush':
+      return campBush(variant);
+    case 'lantern_post':
+      return lanternPost();
     default:
       return undefined;
   }

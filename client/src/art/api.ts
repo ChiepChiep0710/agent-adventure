@@ -195,7 +195,21 @@ export type FurnitureKind =
   | 'sink' // 1x1 pia com gabinete (encostada na parede norte; use 'mirror' na parede acima).
   // --- recepção
   | 'reception_desk' // 3x1 balcão de recepção.
-  | 'bench'; // 2x1 banco de espera (assento, olhando para baixo).
+  | 'bench' // 2x1 banco de espera (assento, olhando para baixo).
+  // --- acampamento de aventureiros (skin de fantasia: cada sala de projeto vira um acampamento)
+  | 'campfire' // 2x2 fogueira: anel de pedras, lenha cruzada, chamas e brasas. rects.glow = centro do fogo.
+  | 'camp_table' // 2x1 bancada de artesão (mesmo lugar da mesa: lugar de trabalho). variants de ``desk``.
+  | 'camp_table_back' // 2x1 bancada vista por trás (par da camp_table, como a desk_back).
+  | 'stump' // 1x1 toco de árvore usado como assento. variants = cor da almofada de tecido.
+  | 'log_seat' // 1x1 tronco deitado (banqueta do acampamento).
+  | 'tent' // 3x2 barraca A-frame com aba de entrada. variants = cor da lona.
+  | 'quest_board' // 2x1 quadro de missões em dois postes (no lugar do quadro branco).
+  | 'bedroll' // 1x1 saco de dormir estendido (assento; no lugar do puff). variants = cor da manta.
+  | 'crate' // 1x1 caixote de suprimentos.
+  | 'barrel' // 1x1 barril de madeira com aros de ferro.
+  | 'camp_tree' // 1x1 árvore do acampamento (pinheiro ou carvalho). variants: 'pine' | 'oak'
+  | 'camp_bush' // 1x1 arbusto com frutinhas. variants: 'fern' | 'flower'
+  | 'lantern_post'; // 1x1 poste com lanterna acesa (o "interruptor" do acampamento). rects.glow = lanterna.
 
 export interface FurnitureDef {
   mount: 'floor' | 'wall';
@@ -269,6 +283,21 @@ export const FURNITURE: Readonly<Record<FurnitureKind, FurnitureDef>> = {
   sink: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
   reception_desk: { mount: 'floor', footprint: { w: 3, h: 1 }, blocks: true },
   bench: { mount: 'floor', footprint: { w: 2, h: 1 }, blocks: false, seat: true },
+  // --- acampamento (mesmos footprints dos móveis de escritório equivalentes, para o layout
+  //     e a simulação não precisarem saber da skin)
+  campfire: { mount: 'floor', footprint: { w: 2, h: 2 }, blocks: true },
+  camp_table: { mount: 'floor', footprint: { w: 2, h: 1 }, blocks: true, variants: ['wood', 'white', 'dark'] },
+  camp_table_back: { mount: 'floor', footprint: { w: 2, h: 1 }, blocks: true, variants: ['wood', 'white', 'dark'] },
+  stump: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: false, seat: true, variants: ['black', 'blue', 'red', 'green', 'gray'] },
+  log_seat: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: false, seat: true },
+  tent: { mount: 'floor', footprint: { w: 3, h: 2 }, blocks: true, variants: ['red', 'blue', 'green', 'gold', 'violet', 'teal'] },
+  quest_board: { mount: 'floor', footprint: { w: 2, h: 1 }, blocks: true },
+  bedroll: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: false, seat: true, variants: ['red', 'blue', 'green', 'gold'] },
+  crate: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
+  barrel: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
+  camp_tree: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true, variants: ['pine', 'oak'] },
+  camp_bush: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true, variants: ['fern', 'flower'] },
+  lantern_post: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
 };
 
 export type FloorKind =
@@ -282,7 +311,18 @@ export type FloorKind =
   | 'sidewalk' // calçada externa
   | 'street'; // rua externa (faixas desenhadas pelo render se quiser)
 
-export type WallPattern = 'plain' | 'stripes' | 'tiles' | 'wood_panel' | 'brick' | 'glass' | 'marble';
+export type WallPattern =
+  | 'plain'
+  | 'stripes'
+  | 'tiles'
+  | 'wood_panel'
+  | 'brick'
+  | 'glass'
+  | 'marble'
+  // Skin de fantasia: o acampamento não tem paredes — a "parede" norte é a borda da mata
+  // (copa densa sobre floresta escura) e a sul é uma cerca viva baixa.
+  | 'treeline'
+  | 'hedge';
 
 export interface WallStyle {
   /** Cor base da face da parede. */

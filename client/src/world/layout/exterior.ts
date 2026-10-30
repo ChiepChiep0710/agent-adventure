@@ -1,11 +1,23 @@
 // Área externa: grama, árvores, calçada e rua; pátio/jardim nos slots sem sala.
 import type { WallStyle } from '../../art/api';
+import { isFantasy } from '../../art/skin';
 import { mulberry32 } from '../../../../shared/hash';
 import { BUILDING_H, COL_W, CORE_COLS, CORRIDOR_Y, EXT_EAST, EXT_NORTH, EXT_SOUTH, EXT_WEST, SOUTH_Y, TILE } from '../constants';
 import { cellRect, slotAt, slotColumn, slotSide } from './geometry';
 import type { ExteriorProp, FloorPatch, TileRect, WallItemPlacement, WallSegment } from './types';
 
 export const EXTERIOR_WALL: WallStyle = { base: '#cfc8bd', trim: '#8a8174', pattern: 'brick', exterior: true };
+
+/**
+ * Muro do entorno na skin atual: na fantasia o prédio não tem fachada de tijolo — o jardim é
+ * fechado por cerca viva e, no fundo, pela mata.
+ */
+export function exteriorWall(pattern: 'hedge' | 'treeline' = 'hedge'): WallStyle {
+  if (!isFantasy()) return EXTERIOR_WALL;
+  return pattern === 'treeline'
+    ? { base: '#46603a', trim: '#2e4a2b', pattern: 'treeline', exterior: true }
+    : { base: '#4f7a42', trim: '#35552f', pattern: 'hedge', exterior: true };
+}
 
 export interface ExteriorLayout {
   /** Limites da área desenhada (tiles). */
@@ -129,13 +141,14 @@ export function slotShell(slot: number, lastColumn: boolean): SlotShell {
   };
 
   if (side === 'north') {
-    // fachada com janelas fechando o corredor (linhas 10–11)
+    // fachada com janelas fechando o corredor (linhas 10–11) — na fantasia, a mata fecha o fundo
+    const shellWall = exteriorWall('treeline');
     const fy = (CORRIDOR_Y - 2) * TILE;
-    walls.push({ kind: 'face', x: x0, y: fy, w: W, style: EXTERIOR_WALL });
+    walls.push({ kind: 'face', x: x0, y: fy, w: W, style: shellWall });
     [3, 8, 13].forEach((cx, i) =>
       windows.push({ id: `shell:${slot}:janela${i}`, kind: 'window', cx: x0 + cx * TILE, baseY: CORRIDOR_Y * TILE, on: 'face', order: 0 }),
     );
-    if (lastColumn) walls.push({ kind: 'cap', x: x0 + W - TILE / 2, y: fy, w: TILE / 2, h: 2 * TILE, style: EXTERIOR_WALL });
+    if (lastColumn) walls.push({ kind: 'cap', x: x0 + W - TILE / 2, y: fy, w: TILE / 2, h: 2 * TILE, style: shellWall });
     // caminho do gramado até o deck, deck no meio e canteiros sob as janelas
     floors.push({ kind: 'sidewalk', x: x0 + T(7), y: T(rect.y), w: T(2), h: T(3), seed: slot });
     deck(3, 3, 10, 5);
@@ -150,8 +163,9 @@ export function slotShell(slot: number, lastColumn: boolean): SlotShell {
     props.push({ kind: 'bush', x: x0 + T(15) - 8, y: T(rect.y + 8), seed: seed(), slot });
   } else {
     // mureta externa fechando o corredor (linha 17) e jardim abaixo, ligado à calçada da rua
-    walls.push({ kind: 'south', x: x0, y: SOUTH_Y * TILE, w: W, style: EXTERIOR_WALL });
-    if (lastColumn) walls.push({ kind: 'cap', x: x0 + W - TILE / 2, y: SOUTH_Y * TILE, w: TILE / 2, h: TILE, style: EXTERIOR_WALL });
+    const shellWall = exteriorWall('hedge');
+    walls.push({ kind: 'south', x: x0, y: SOUTH_Y * TILE, w: W, style: shellWall });
+    if (lastColumn) walls.push({ kind: 'cap', x: x0 + W - TILE / 2, y: SOUTH_Y * TILE, w: TILE / 2, h: TILE, style: shellWall });
     floors.push({ kind: 'sidewalk', x: x0 + T(7), y: T(rect.y + 1), w: T(2), h: T(rect.h - 1), seed: slot });
     // trecho entre a fachada e a calçada: só existe enquanto o slot está vazio (a cerca viva fecha)
     props.push({ kind: 'paving', x: x0 + T(7), y: T(BUILDING_H), seed: slot, slot });

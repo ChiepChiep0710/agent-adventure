@@ -28,6 +28,11 @@ do meio (0.**3**.0).
   da cadeira; TV e fliperama viram espelho mágico. Na interface: uso como **HP (janela de 5 h) e MP (semana)**
   mostrando o que resta, atividade vira **Diário de missões**, a barra lateral vira **Guilda**, painéis com moldura
   dourada, e **Configurações › Aparência** ganha o seletor de skin (Escritório / Fantasia).
+  Na fantasia, cada projeto vira um **acampamento de aventureiros** ao ar livre (fogueira, barracas na cor do
+  tema, bancadas e tocos em volta do fogo, quadro de missões, mata e cerca viva no lugar das paredes); corredor vira
+  estrada de terra e o núcleo vira pátios de grama. E os agentes vivem **encontros de RPG** ligados à atividade real
+  (editando: luta com slime/golem; comando/teste: faíscas da bigorna; lendo: runas; web: morcego; entregue: baú de
+  tesouro), só decoração, sem inventar agentes nem status.
 - **Nomes escolhidos para os agentes do Hermes** (`hermes-names.json`). Dois campos opcionais na pasta de dados do
   Habblaud: **`pool`** (estoque de nomes: cada agente novo, principal ou subagente, recebe um nome sorteado entre os
   ainda livres; esgotado, volta ao sorteio) e **`names`** (nome fixo por session id, que ganha do estoque). O arquivo é relido

@@ -20,6 +20,9 @@ const REPLACED: FurnitureKind[] = [
   'bench', 'mirror', 'shelf_wall', 'sign', 'door_frame', 'light_switch', 'elevator',
 ];
 
+/** Kinds só do acampamento (sem equivalente no escritório): só precisam renderizar na fantasia. */
+const CAMP_ONLY: FurnitureKind[] = ['campfire', 'camp_table', 'camp_table_back', 'stump', 'log_seat', 'tent', 'quest_board', 'bedroll', 'crate', 'barrel', 'camp_tree', 'camp_bush', 'lantern_post'];
+
 /** Resumo FNV-1a dos bytes (sprites iguais byte a byte dão o mesmo resumo). */
 function digest(data: Uint8ClampedArray): string {
   let h = 0x811c9dc5;
@@ -57,6 +60,7 @@ describe('móveis da skin de fantasia', () => {
             expect(fantasy.base.ay, tag).toBeGreaterThan(0);
             expect(fantasy.base.ay - fantasy.base.buf.h, tag).toBeLessThanOrEqual(2 * TILE);
           }
+          if (CAMP_ONLY.includes(kind)) continue;
           if (!REPLACED.includes(kind)) {
             // Kind sem versão de fantasia: continua idêntico ao do escritório.
             expect(digest(fantasy.base.buf.data), tag).toBe(digest(office.base.buf.data));

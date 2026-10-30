@@ -23,7 +23,8 @@ import { Lighting } from './lighting';
 import { Particles } from './particles';
 import { carSprite, propSprite, shadowSprite } from './props';
 import { countBadge, fallbackIcon } from './shell-sprites';
-import { characterCostume } from './fantasy-class';
+import { characterCostume, type FantasyClassInput } from './fantasy-class';
+import { drawEncounter, type EncounterActor } from './encounters';
 import { shouldDrawRoadMarkings } from './skin-props';
 import { decorateElevator, drawSeasonalLights, drawSeasonalWindow, seasonalFurniture } from './seasonal';
 import { buildAreaVis, furnitureSprites, opaqueBounds, paintShell, toWallVis, WALL_MARGIN, wallItemOrigin, wallSprites, type AreaVis, type FurnVis, type WallVis } from './scene';
@@ -78,6 +79,10 @@ const WEB_MAX_OUT = 9;
 /** Tom das bordas da área externa (vinheta) e do gramado além dela. */
 const VIGNETTE_ALPHA = 0.2;
 const VIGNETTE_EDGE = `rgba(18,40,26,${VIGNETTE_ALPHA})`;
+/** Cenas de RPG por quadro: acima disso a fantasia vira poluição visual. */
+const MAX_ENCOUNTERS = 24;
+/** Abaixo deste zoom as cenas de 16px somem no ruído: só o personagem fica. */
+const MIN_ENCOUNTER_SCALE = 0.6;
 
 export class Renderer {
   readonly ctx: CanvasRenderingContext2D;
@@ -106,6 +111,10 @@ export class Renderer {
   /** dt do frame atual (s), para as partículas emitidas durante o desenho. */
   private dt = 0;
   private iconCount = 0;
+  /** Orçamento de cenas de RPG (skin de fantasia) para o quadro atual. */
+  private encounterBudget = 0;
+  /** Escala atual da câmera (para descartar detalhes minúsculos no zoom afastado). */
+  private worldScale = 1;
   private elevatorVis: WallVis[] = [];
   private occupiedSlots = new Set<number>();
   /** Hora forçada (?hora=21:30 na URL ou depuração) ou null para a hora local. */
@@ -336,6 +345,7 @@ export class Renderer {
     ctx.fillStyle = this.clearColor;
     ctx.fillRect(0, 0, W, H);
     const { scale, ox, oy } = camera.transform();
+    this.worldScale = scale;
     ctx.setTransform(scale, 0, 0, scale, ox, oy);
     const vx0 = -ox / scale;
     const vy0 = -oy / scale;
@@ -473,6 +483,7 @@ export class Renderer {
     ents.sort((a, b) => a.y - b.y || a.k - b.k);
 
     this.iconCount = 0;
+    this.encounterBudget = MAX_ENCOUNTERS;
     for (const e of ents) {
       switch (e.k) {
         case K.FurnBase:
@@ -841,6 +852,25 @@ export class Renderer {
     ctx.globalAlpha = 1;
   }
 
+  /** Entrada da classe de RPG: status e atividade reais do agente (a classe não muda a cada quadro). */
+  private classInfo(ch: Character): FantasyClassInput {
+    return { seed: ch.info.seed, status: ch.info.status, kind: ch.info.kind, activityKind: ch.info.activity?.kind };
+  }
+
+  /** Cena de RPG do agente: pés já com a faixa lateral, mesma semente e mesmo status da arte dele. */
+  private encounterActor(ch: Character, x: number, y: number): EncounterActor {
+    return {
+      x,
+      y,
+      alpha: ch.alpha,
+      seed: ch.info.seed,
+      status: ch.info.status,
+      activityKind: ch.info.activity?.kind,
+      statusSince: ch.info.statusSince,
+      moving: ch.step !== null,
+    };
+  }
+
   private drawCharacter(ch: Character, now: number, sel: { agent: string | null; hover: string | null }): void {
     const { ctx } = this;
     const head = this.headOf(ch);
@@ -864,7 +894,7 @@ export class Renderer {
     req.held = ch.held;
     req.seated = ch.seated;
     // Skin de fantasia: a classe de RPG (por atividade) vence o acessório sazonal; no escritório, o sazonal.
-    req.costume = characterCostume(ch.info, this.theme);
+    req.costume = characterCostume(this.classInfo(ch), this.theme);
     try {
       sprite = this.charSprite(req, ch.animT);
     } catch {
@@ -896,6 +926,12 @@ export class Renderer {
       head.bw = 14;
       head.bh = 26;
       head.y = y - 26;
+    }
+    // Skin de fantasia: a cena de RPG ao lado do herói (luta, forja, runas, batedor, guarda, baú ou
+    // fogueira). É decoração derivada do status/atividade REAIS do agente; nada é inventado.
+    if (isFantasy() && this.encounterBudget > 0 && this.worldScale >= MIN_ENCOUNTER_SCALE) {
+      this.encounterBudget--;
+      this.safe(() => drawEncounter(ctx, this.encounterActor(ch, x, y), now));
     }
     ctx.globalAlpha = 1;
     head.x = x;

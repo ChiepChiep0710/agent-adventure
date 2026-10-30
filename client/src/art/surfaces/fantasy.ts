@@ -295,6 +295,9 @@ export function fantasyStoneBase(base: string): string {
 }
 
 export function fantasyCapColor(style: WallStyle): string {
+  // Cerca viva/mata do acampamento: a "tampa" é a copa iluminada, não pedra.
+  if (style.pattern === 'hedge') return mix('#3f6b38', fantasyStoneBase(style.base), 0.12);
+  if (style.pattern === 'treeline') return mix('#24401f', fantasyStoneBase(style.base), 0.1);
   return mix(style.exterior ? '#3a3633' : '#2f2b2a', fantasyStoneBase(style.base), 0.12);
 }
 
@@ -337,14 +340,133 @@ function timberFrame(b: PixelBuf, base: string, fy: number, fh: number, col: num
   if (col % 4 === 1) for (let i = 0; i < Math.min(TILE, mid - fy); i++) b.rect(i, mid - 1 - i, 2, 1, beam);
 }
 
+// ------------------------------------------------------------------ mata e cerca viva (acampamento)
+
+/** Verdes do acampamento (mata densa, folhagem e sub-bosque). */
+const WILD = {
+  leafLt: '#6faa53',
+  leaf: '#4f8a44',
+  leafDk: '#356334',
+  pine: '#2b4f31',
+  deep: '#152418',
+  deep2: '#27422a',
+  bark: '#5a4130',
+  barkDk: '#3d2c1f',
+} as const;
+
+/**
+ * Face da "parede" norte de um acampamento: sem parede nenhuma — a borda de uma floresta densa,
+ * com troncos no escuro, copa em camadas (mais clara em cima, onde bate a luz) e sub-bosque na base.
+ * A tampa de 4 px é a copa iluminada, o que faz o campo "fechar" sem muro.
+ */
+function treelineTile(col: number): PixelBuf {
+  const b = new PixelBuf(TILE, WALL_FACE_H);
+  const wx0 = col * TILE;
+  // Fundo: mata funda com profundidade (ruído em duas escalas).
+  for (let y = 0; y < WALL_FACE_H; y++) {
+    for (let x = 0; x < TILE; x++) {
+      const n = noise(wx0 + x, y, 11, 71) * 0.7 + noise(wx0 + x, y, 3, 73) * 0.3;
+      b.set(x, y, mix(WILD.deep, WILD.deep2, n));
+    }
+  }
+  // Troncos: dois por coluna, com uma leve inclinação sorteada (sem emenda dura entre colunas).
+  for (const tx of [3, 11]) {
+    const lean = (h3(col, tx, 3, 9) % 3) - 1;
+    for (let y = 7; y < WALL_FACE_H; y++) {
+      const x = tx + Math.round(lean * ((y - 7) / 22));
+      if (x < 0 || x > TILE - 2) continue;
+      b.rect(x, y, 2, 1, y % 6 === 0 ? WILD.barkDk : WILD.bark);
+      b.set(x, y, y % 5 === 0 ? WILD.barkDk : WILD.bark);
+    }
+  }
+  // Copa: manchas de folhagem em três tons, mais claras no alto.
+  for (let y = 0; y < WALL_FACE_H - 4; y++) {
+    const top = 1 - y / WALL_FACE_H;
+    for (let x = 0; x < TILE; x++) {
+      const n = noise(wx0 + x, y, 5, 23) * 0.62 + noise(wx0 + x, y, 2, 29) * 0.38;
+      if (n > 0.7 - top * 0.16) b.set(x, y, n > 0.8 ? WILD.leafLt : WILD.leafDk);
+      else if (n > 0.58 - top * 0.12) b.set(x, y, WILD.pine);
+    }
+  }
+  // Sub-bosque (rodapé): capim e samambaias escuras.
+  for (let y = WALL_FACE_H - 4; y < WALL_FACE_H; y++) b.hline(0, TILE - 1, y, y === WALL_FACE_H - 4 ? '#2a3a24' : '#1b2718');
+  for (let i = 0; i < 14; i++) {
+    const x = h3(col, i, 5, 3) % TILE;
+    const y = WALL_FACE_H - 6 + (h3(col, i, 6, 3) % 5);
+    b.set(x, y, i % 3 ? WILD.leafDk : WILD.leaf);
+    b.set(x, y - 1, WILD.leafLt);
+  }
+  // Tampa: a copa vista de cima, iluminada.
+  b.rect(0, 0, TILE, WALL_CAP_H, '#20351f');
+  b.hline(0, TILE - 1, 0, '#3d5c33');
+  for (let x = 0; x < TILE; x++) if (h3(col * TILE + x, 0, 1, 4) % 3 === 0) b.set(x, 1, WILD.leafLt);
+  b.hline(0, TILE - 1, WALL_CAP_H - 1, '#162512');
+  return b;
+}
+
+/** Cerca viva aparada (muro sul do acampamento/core ao ar livre): folhagem densa e topo iluminado. */
+function hedgeTile(col: number, h: number): PixelBuf {
+  const b = new PixelBuf(TILE, h);
+  const wx0 = col * TILE;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < TILE; x++) {
+      const n = noise(wx0 + x, y, 6, 31) * 0.7 + noise(wx0 + x, y, 3, 37) * 0.3;
+      const lit = Math.max(0, 1 - y / (h * 0.8)) * 0.14;
+      const c = n + lit;
+      b.set(x, y, c > 0.74 ? WILD.leafLt : c > 0.58 ? WILD.leaf : c > 0.42 ? WILD.leafDk : '#284a26');
+    }
+  }
+  // Ramos e folhinhas soltas (textura de cerca viva).
+  for (let i = 0; i < 10; i++) {
+    const x = h3(col, i, 7, 11) % TILE;
+    const y = 4 + (h3(col, i, 8, 11) % (h - 6));
+    b.set(x, y, WILD.barkDk);
+  }
+  for (let i = 0; i < 4; i++) {
+    const x = h3(col, i, 9, 13) % TILE;
+    const y = 3 + (h3(col, i, 10, 13) % (h - 8));
+    b.set(x, y, i % 2 ? '#f2e08a' : '#e8e2d0');
+  }
+  // Topo aparado e iluminado; base na sombra.
+  b.hline(0, TILE - 1, 0, '#7ab057');
+  b.hline(0, TILE - 1, 1, WILD.leafLt);
+  for (let x = 0; x < TILE; x++) if (h3(col * TILE + x, 1, 2, 6) % 3 === 0) b.set(x, 2, WILD.leaf);
+  b.hline(0, TILE - 1, h - 1, '#1d331a');
+  b.hline(0, TILE - 1, h - 2, '#24401f');
+  return b;
+}
+
+/** Borda de mata baixa (muro sul de um campo quando a mata fecha o fundo). */
+function treelineSouthTile(col: number): PixelBuf {
+  const b = new PixelBuf(TILE, TILE);
+  const wx0 = col * TILE;
+  for (let y = 0; y < TILE; y++) {
+    for (let x = 0; x < TILE; x++) {
+      const n = noise(wx0 + x, y, 5, 79) * 0.65 + noise(wx0 + x, y, 2, 83) * 0.35;
+      b.set(x, y, n > 0.72 ? WILD.leafLt : n > 0.56 ? WILD.leafDk : mix(WILD.deep, WILD.pine, n));
+    }
+  }
+  // Troncos baixos saindo da mata.
+  for (const tx of [2, 10]) {
+    for (let y = 3; y < TILE; y++) b.set(tx + (h3(col, tx, 4, 8) % 2), y, y % 5 === 0 ? WILD.barkDk : WILD.bark);
+  }
+  b.hline(0, TILE - 1, 0, '#4f7a3c');
+  b.hline(0, TILE - 1, 1, '#3d5c33');
+  b.hline(0, TILE - 1, TILE - 1, '#111c10');
+  return b;
+}
+
 /** Coluna de 16x32 da face da parede norte na skin de fantasia. */
 export function fantasyWallFaceTile(style: WallStyle, variant: number, col: number): PixelBuf {
+  const pattern = style.pattern ?? 'plain';
+  // Acampamento/core ao ar livre: nada de pedra de castelo — mata densa ou cerca viva.
+  if (pattern === 'treeline') return treelineTile(col);
+  if (pattern === 'hedge') return hedgeTile(col, WALL_FACE_H);
   const b = new PixelBuf(TILE, WALL_FACE_H);
   const fy = WALL_CAP_H;
   const fh = WALL_FACE_H - WALL_CAP_H - BASEBOARD_H;
   const base = fantasyStoneBase(style.base);
   const cap = fantasyCapColor(style);
-  const pattern = style.pattern ?? 'plain';
   switch (pattern) {
     case 'glass': {
       // Vidro antigo esverdeado (continua translúcido) com treliça de chumbo em losango.
@@ -385,6 +507,9 @@ export function fantasyWallFaceTile(style: WallStyle, variant: number, col: numb
 
 /** Tile de 16x16 da parede sul (mureta de pedra). */
 export function fantasySouthWallTile(style: WallStyle, col: number): PixelBuf {
+  // Acampamento: o muro sul baixo é cerca viva (mata fechada quando é o limite do campo).
+  if (style.pattern === 'hedge') return hedgeTile(col, TILE);
+  if (style.pattern === 'treeline') return treelineSouthTile(col);
   const b = new PixelBuf(TILE, TILE);
   const cap = fantasyCapColor(style);
   const capH = 6;

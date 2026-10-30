@@ -1,5 +1,6 @@
 // Núcleo do prédio (colunas 0 e 1): recepção com elevadores, banheiros, copa e lounge.
 import type { WallStyle } from '../../art/api';
+import { isFantasy } from '../../art/skin';
 import { COL_W, NORTH_Y, ROOM_H, SOUTH_Y, TILE } from '../constants';
 import { AreaBuilder, SEATED_SORT_BIAS } from './builder';
 import type { AreaLayout } from './types';
@@ -19,13 +20,27 @@ export const CORE_WALLS = {
   glass: { base: '#cfe6f0', trim: '#9fb9c6', pattern: 'glass' } satisfies WallStyle,
 };
 
+/**
+ * Núcleo na skin de fantasia: o prédio é um pátio ao ar livre — a mata fecha o fundo e as
+ * divisórias viram cerca viva. Nada de pedra de castelo dentro do acampamento.
+ */
+const FAN_MATA: WallStyle = { base: '#46603a', trim: '#2e4a2b', pattern: 'treeline' };
+const FAN_CERCA: WallStyle = { base: '#4f7a42', trim: '#35552f', pattern: 'hedge' };
+
 /** Centros (em tiles locais) dos dois elevadores na face norte da recepção. */
 export const ELEVATOR_CX = [3, 6.5] as const;
 
 export function layoutReception(): AreaLayout {
   const b = new AreaBuilder(RECEPTION_ID, 'reception', { x: 0, y: NORTH_Y, w: COL_W, h: ROOM_H });
   const wall = CORE_WALLS.reception;
-  b.floor('marble', 0, 0, 16, 12, 101);
+  const fan = isFantasy();
+  // fantasia: pátio do portal — grama e trilha de terra no lugar do mármore (os elevadores ficam
+  // na parede de pedra do portal, que continua sendo a "fachada" do prédio)
+  b.floor(fan ? 'grass' : 'marble', 0, 0, 16, 12, 101);
+  if (fan) {
+    b.floor('sidewalk', 2, 2, 6, 9, 104);
+    b.floor('sidewalk', 9, 6, 6, 4, 105);
+  }
   b.rug(1.5, 2.2, 6.5, 2.6, '#3d5a80', 102);
   b.rug(8.6, 6.4, 5.2, 3.2, '#b65f3a', 103);
   b.face(0.5, 15, wall);
@@ -73,15 +88,18 @@ export function layoutReception(): AreaLayout {
 
 export function layoutRestroom(): AreaLayout {
   const b = new AreaBuilder(RESTROOM_ID, 'restroom', { x: 0, y: SOUTH_Y, w: COL_W, h: ROOM_H });
-  const wall = CORE_WALLS.restroom;
-  b.floor('tile_white', 0, 0, 16, 12, 201);
-  // tapetinho só na frente das pias (nada de tapete grande no meio do banheiro)
+  const fan = isFantasy();
+  const wall = fan ? FAN_MATA : CORE_WALLS.restroom;
+  b.floor(fan ? 'grass' : 'tile_white', 0, 0, 16, 12, 201);
+  // fantasia: trilha de terra da porta (norte, x 7-8) até as tinas
+  if (fan) b.floor('sidewalk', 7, 0, 2, 5, 203);
+  // tapetinho só na frente das pias (nada de tapete grande no banheiro)
   b.rug(2, 3.15, 3, 0.85, '#6fa3b8', 202);
   b.face(0.5, 15, wall, [{ lx: 7, w: 2 }]);
   b.wall('door_frame', 8, undefined, { order: 0.05 });
-  b.south(0.5, 15, 11, { ...wall, exterior: true });
-  b.cap(0, 0, 0.5, 12, wall);
-  b.cap(15.5, 0, 0.5, 12, wall);
+  b.south(0.5, 15, 11, { ...(fan ? FAN_CERCA : wall), exterior: true });
+  b.cap(0, 0, 0.5, 12, fan ? FAN_CERCA : wall);
+  b.cap(15.5, 0, 0.5, 12, fan ? FAN_CERCA : wall);
   b.walk(1, 2, 14, 9);
   b.walk(7, 0, 2, 2);
   b.area.door = { x: 7, y: SOUTH_Y, w: 2, h: 2 };
@@ -117,10 +135,13 @@ export function layoutRestroom(): AreaLayout {
 
 export function layoutCafe(): AreaLayout {
   const b = new AreaBuilder(CAFE_ID, 'cafe', { x: COL_W, y: NORTH_Y, w: COL_W, h: ROOM_H });
-  const wall = CORE_WALLS.cafe;
-  b.floor('tile_check', 0, 0, 16, 12, 301);
+  const fan = isFantasy();
+  const wall = fan ? FAN_MATA : CORE_WALLS.cafe;
+  // fantasia: pátio da taverna — grama e terra batida na frente da bancada
+  b.floor(fan ? 'grass' : 'tile_check', 0, 0, 16, 12, 301);
+  if (fan) b.floor('sidewalk', 1, 3, 14, 2, 303);
   // frontão de mármore atrás da bancada + parede clara com janelas
-  b.face(0.5, 9, CORE_WALLS.cafeSplash);
+  b.face(0.5, 9, fan ? FAN_CERCA : CORE_WALLS.cafeSplash);
   b.face(9.5, 6, wall);
   b.cap(0, 0, 0.5, 12, wall);
   b.cap(15.5, 0, 0.5, 12, wall);
@@ -147,9 +168,11 @@ export function layoutCafe(): AreaLayout {
   b.spot('snack', 9, 3, 'up', { dy: -3, furnitureId: vend });
   b.furn('water_cooler', 10, 2, undefined, { order: 0.36 });
   b.spot('water', 10, 3, 'up', { dy: -3 });
-  // janelas (nada alto na frente delas)
-  b.wall('window', 12, undefined, { order: 0.4 });
-  b.wall('window', 14.25, undefined, { order: 0.45 });
+  // janelas (nada alto na frente delas) — na fantasia a "parede" é mata: sem esquadrias penduradas
+  if (!fan) {
+    b.wall('window', 12, undefined, { order: 0.4 });
+    b.wall('window', 14.25, undefined, { order: 0.45 });
+  }
   b.spot('window', 11, 2, 'up', { dx: 8, dy: 1 });
   b.spot('window', 13, 2, 'up', { dx: 12, dy: 1 });
 
@@ -188,16 +211,20 @@ export function layoutCafe(): AreaLayout {
 
 export function layoutLounge(): AreaLayout {
   const b = new AreaBuilder(LOUNGE_ID, 'lounge', { x: COL_W, y: SOUTH_Y, w: COL_W, h: ROOM_H });
-  const wall = CORE_WALLS.lounge;
-  b.floor('wood', 0, 0, 16, 12, 401);
+  const fan = isFantasy();
+  const wall = fan ? FAN_MATA : CORE_WALLS.lounge;
+  // fantasia: o lounge é um terraço da taverna (grama sob o tapete, madeira velha do deck)
+  b.floor(fan ? 'grass' : 'wood', 0, 0, 16, 12, 401);
+  // trilha de terra da passagem larga (norte, x 7-9) para dentro do terraço
+  if (fan) b.floor('sidewalk', 7, 0, 3, 4, 404);
   b.rug(1.5, 3.2, 7, 5.2, '#4f8a5b', 402);
   b.rug(9.2, 4.6, 5.6, 4.4, '#d7c8a8', 403);
   // parede com TV a oeste; vidro a leste; passagem larga no meio
   b.face(0.5, 6.5, wall);
-  b.face(10, 5.5, CORE_WALLS.glass);
-  b.south(0.5, 15, 11, { ...wall, exterior: true });
-  b.cap(0, 0, 0.5, 12, wall);
-  b.cap(15.5, 0, 0.5, 12, wall);
+  b.face(10, 5.5, fan ? FAN_CERCA : CORE_WALLS.glass);
+  b.south(0.5, 15, 11, { ...(fan ? FAN_CERCA : wall), exterior: true });
+  b.cap(0, 0, 0.5, 12, fan ? FAN_CERCA : wall);
+  b.cap(15.5, 0, 0.5, 12, fan ? FAN_CERCA : wall);
   b.walk(1, 2, 14, 9);
   b.walk(7, 0, 3, 2);
   b.area.door = { x: COL_W + 7, y: SOUTH_Y, w: 3, h: 2 };
