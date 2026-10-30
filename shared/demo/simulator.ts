@@ -19,7 +19,7 @@ import { answerSummary, ASK_TOOL, checkAnswers } from '../answers';
 import { describeGitHubEvent, GITHUB_TOOL, RoomEffects } from '../github';
 import { hash32, mulberry32 } from '../hash';
 import { describeMessage, MESSAGE_TOOL } from '../messages';
-import { pickName } from '../names';
+import { pickName, pickNameIn } from '../names';
 import { demoGitHubEvent } from './github';
 import { demoCodexPermission, demoPermission, type DemoPermissionKind } from './permission';
 import { tr } from '../i18n';
@@ -205,6 +205,13 @@ export interface DemoOptions {
   idPrefix?: string;
   /** Conta do Codex sempre "sem cota" (capturas de tela e testes); sem isso, ela fica sem cota só de vez em quando. */
   codexNoQuota?: boolean;
+  /**
+   * Lista de nomes da fonte (ex.: `pool` do hermes-names.json). Devolve null para usar o pool do Habblaud.
+   * É lida a cada nascimento, porque o arquivo pode mudar com o servidor rodando.
+   */
+  names?: () => readonly string[] | null;
+  /** Nomes já em uso no escritório real, para o demo não repetir nenhum deles. */
+  takenNames?: () => ReadonlySet<string>;
 }
 
 const SLOT_COOLDOWN_MS = 30_000;
@@ -214,6 +221,10 @@ const DONE_GRACE_MS = 25_000;
 export class DemoSimulator {
   private rng: () => number;
   private speed: number;
+  /** Lista de nomes da fonte (null = pool do Habblaud), relida a cada nascimento. */
+  private readonly namesOf?: () => readonly string[] | null;
+  /** Nomes do escritório real: entram no sorteio como já usados. */
+  private readonly takenOf?: () => ReadonlySet<string>;
   private target: number;
   private prefix: string;
   /** Marca desta instância: ids de agentes/atividades/avisos não se repetem ao religar o demo. */
@@ -259,6 +270,8 @@ export class DemoSimulator {
     this.prSeq = 12 + Math.floor(this.ghRng() * 80);
     this.codexRng = mulberry32(((opts.seed ?? hash32(String(now))) ^ 0x3c6ef372) >>> 0);
     this.target = opts.sessions ?? 4;
+    this.namesOf = opts.names;
+    this.takenOf = opts.takenNames;
     this.prefix = opts.idPrefix ?? '';
     this.tag = now.toString(36);
     this.accounts = this.prefix
@@ -498,7 +511,10 @@ export class DemoSimulator {
   }
 
   private usedNames(): Set<string> {
-    return new Set([...this.agents.values()].map((a) => a.info.name));
+    const used = new Set([...this.agents.values()].map((a) => a.info.name));
+    // O pool é curto: sem isto, o demo repetiria um nome que já está no escritório real.
+    for (const n of this.takenOf?.() ?? []) used.add(n);
+    return used;
   }
 
   private ensureRoom(project: DemoProject, now: number): RoomInfo {
@@ -532,7 +548,7 @@ export class DemoSimulator {
     const id = `${this.prefix || 'demo:'}${this.tag}-${n}`;
     // Codex: na abertura, só a 2ª; depois, ~30% das sessões novas (pelo hash do id, sem gastar o sorteio).
     const codex = !!host || (!warm && hash32(`codex:${sessionId}`) % 100 < CODEX_SHARE);
-    const person = pickName(sessionId, this.usedNames());
+    const person = pickNameIn(this.namesOf?.() ?? [], sessionId, this.usedNames());
     const rng = mulberry32(hash32(sessionId));
     const tasks: TaskItem[] = project.tasks
       .slice(0, 3 + Math.floor(rng() * 2))
@@ -593,7 +609,7 @@ export class DemoSimulator {
     const n = ++this.seq;
     const agentId = `a${Math.floor(this.rng() * 1e12).toString(16)}`;
     const id = `${parent.info.sessionId}:${agentId}`;
-    const person = pickName(id, this.usedNames());
+    const person = pickNameIn(this.namesOf?.() ?? [], id, this.usedNames());
     const rng = mulberry32(hash32(id));
     const desc = this.pick(SUB_TASKS, rng);
     const info: AgentInfo = {

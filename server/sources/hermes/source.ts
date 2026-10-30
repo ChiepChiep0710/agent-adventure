@@ -305,6 +305,8 @@ export class HermesSource implements AgentSource {
       pool = [];
     }
     this.names = { mtimeMs, map, pool };
+    // Com HABBLAUD_NAMES=hermes, esta lista é a única fonte de nomes dos personagens (o nome da sessão é ignorado).
+    this.opts.office.setSourceNamePool(pool);
   }
 
   /** Nome pedido para o agente: tenta as chaves na ordem (id do agente, id da sessão). */

@@ -49,6 +49,33 @@ export function pickName(id: string, used: ReadonlySet<string>): PersonName {
 
 const POOL_NAMES: ReadonlySet<string> = new Set(NAME_POOL.map((p) => p.name));
 
+/** Dica visual (f/m) de um nome: a do pool do Habblaud, ou sorteada pelo nome quando ele vem de outra lista. */
+function withLook(name: string): PersonName {
+  const hit = NAME_POOL.find((p) => p.name === name);
+  return hit ? { name: hit.name, look: hit.look } : { name, look: hash32(name) % 2 === 0 ? 'f' : 'm' };
+}
+
+/**
+ * `name` pertence a `pool`, contando o sufixo numérico de quando a lista esgota ("Ana 2")?
+ * Serve para recusar nomes de fora da lista que a fonte mandou (título de sessão, apelido antigo).
+ */
+export function isNameFromPool(pool: readonly string[], name: string): boolean {
+  if (pool.includes(name)) return true;
+  const m = /^(.+) (\d+)$/.exec(name);
+  return !!m && Number(m[2]) >= 2 && pool.includes(m[1]);
+}
+
+export function pickNameIn(pool: readonly string[], id: string, used: ReadonlySet<string>): PersonName {
+  const n = pool.length;
+  if (!n) return pickName(id, used);
+  const start = hash32(id) % n;
+  for (let i = 0; i < n; i++) {
+    const name = pool[(start + i) % n];
+    if (!used.has(name)) return withLook(name);
+  }
+  return pickName(id, used);
+}
+
 /**
  * `name` veio do pool? Vale também o sufixo numérico que o pool usa quando esgota ("Ana 2").
  * Nomes de fora do pool (título de sessão, apelido da fonte) são recusados pelo escritório: os

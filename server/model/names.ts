@@ -4,7 +4,7 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { parseAppearanceParts, parseCharacterName, parseSeed, type AppearanceParts } from '../../shared/appearance';
-import { isPoolName, pickName, type PersonName } from '../../shared/names';
+import { isNameFromPool, pickName, pickNameIn, type PersonName } from '../../shared/names';
 import { errMsg, log } from '../log';
 import { tr } from '../../shared/i18n';
 
@@ -66,14 +66,26 @@ export class NameStore {
   /** `file` null = só em memória (testes ou diretório de dados indisponível). */
   constructor(
     private readonly file: string | null,
-    opts: { now?: () => number; poolOnly?: boolean } = {},
+    opts: { now?: () => number } = {},
   ) {
     this.now = opts.now ?? Date.now;
-    this.poolOnly = opts.poolOnly === true;
   }
 
-  /** Só aceita nomes do pool (`shared/names.ts`), descartando os guardados de fora dele. */
-  private readonly poolOnly: boolean;
+  /** Lista de nomes da fonte (ex.: `pool` do hermes-names.json). null = pool do Habblaud (`shared/names.ts`). */
+  private pool: readonly string[] | null = null;
+
+  /**
+   * Troca a lista de nomes usada para sortear: os nomes da fonte valem primeiro, e os do pool do
+   * Habblaud entram só como reforço quando a lista da fonte esgota ("thiếu thì mới thêm").
+   */
+  setPool(pool: readonly string[] | null): void {
+    this.pool = pool && pool.length ? [...pool] : null;
+  }
+
+  /** Lista da fonte em uso (null quando os nomes são os do pool do Habblaud). */
+  poolNames(): readonly string[] | null {
+    return this.pool;
+  }
 
   load(): void {
     if (!this.file) return;
@@ -97,12 +109,13 @@ export class NameStore {
   /** Nome de `key`: o persistido, se não colidir com `used`; senão um novo do pool. */
   assign(key: string, used: ReadonlySet<string>): PersonName {
     const stored = this.names.get(key);
-    if (stored && !used.has(stored.name) && (!this.poolOnly || isPoolName(stored.name))) {
+    const allowed = this.pool ? isNameFromPool(this.pool, stored?.name ?? '') : true;
+    if (stored && !used.has(stored.name) && allowed) {
       stored.at = this.now();
       this.scheduleFlush();
       return { name: stored.name, look: stored.look };
     }
-    const person = pickName(key, used);
+    const person = this.pool ? pickNameIn(this.pool, key, used) : pickName(key, used);
     this.remember(key, person);
     return person;
   }

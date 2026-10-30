@@ -55,8 +55,12 @@ const FEED_LIMIT = 200;
 
 export interface OfficeDeps {
   names: NameStore;
-  /** Só nomes do pool (`shared/names.ts`): HABBLAUD_NAMES=pool. Ver ServerConfig.namesMode. */
-  poolNamesOnly?: boolean;
+  /**
+   * 'source' (padrão): nomes da fonte valem (arquivo de nomes, título da sessão).
+   * 'hermes': só os nomes da lista da fonte (ex.: `pool` do hermes-names.json); o nome da sessão é ignorado.
+   * Ver ServerConfig.namesMode / HABBLAUD_NAMES.
+   */
+  namesMode?: 'source' | 'hermes';
   /** Nome escolhido pelo usuário para a sala da pasta (model/room-aliases.ts), se houver. */
   roomAlias?: (path: string) => string | undefined;
   version: string;
@@ -820,11 +824,23 @@ export class Office {
 
   // ---------------------------------------------------------------- demonstração
 
+  /** A fonte informou a lista de nomes dela (ex.: `pool` do hermes-names.json): usada quando namesMode = 'hermes'. */
+  setSourceNamePool(pool: readonly string[] | null): void {
+    if (this.deps.namesMode === 'hermes') this.deps.names.setPool(pool);
+  }
+
   setDemo(enabled: boolean): void {
     if (enabled === this.isDemo()) return;
     const now = this.now();
     if (enabled) {
-      this.demo = new DemoSimulator({ idPrefix: 'demo:' }, now);
+      this.demo = new DemoSimulator(
+        {
+          idPrefix: 'demo:',
+          names: () => this.deps.names.poolNames(),
+          takenNames: () => this.takenNames(),
+        },
+        now,
+      );
       this.demoSnap = this.demo.snapshot(now);
     } else {
       this.demo = null;
@@ -1042,7 +1058,7 @@ export class Office {
   private preferredName(key: string, wanted: string | undefined, taken: Set<string>): PersonName | undefined {
     const name = parseCharacterName(wanted);
     // Nome de fora do pool (título da sessão, apelido do Hermes) não vale: o personagem usa o pool.
-    if (!name || taken.has(name) || (this.deps.poolNamesOnly === true && !isPoolName(name))) return undefined;
+    if (!name || taken.has(name) || this.deps.namesMode === 'hermes') return undefined;
     const person: PersonName = { name, look: this.deps.names.get(key)?.look ?? 'f' };
     this.deps.names.remember(key, person);
     return person;
@@ -1058,7 +1074,7 @@ export class Office {
     const free: Array<{ name: string; look: 'f' | 'm' }> = [];
     for (const [i, raw] of pool.entries()) {
       const name = parseCharacterName(raw);
-      if (name && !taken.has(name) && (this.deps.poolNamesOnly !== true || isPoolName(name))) free.push({ name, look: i % 2 === 0 ? 'f' : 'm' });
+      if (name && !taken.has(name)) free.push({ name, look: i % 2 === 0 ? 'f' : 'm' });
     }
     if (!free.length) return undefined;
     const pick = free[Math.min(free.length - 1, Math.floor((this.deps.random?.() ?? Math.random()) * free.length))];

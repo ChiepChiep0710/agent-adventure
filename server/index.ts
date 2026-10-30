@@ -2,6 +2,7 @@
 // mantém o modelo do escritório e transmite via SSE. Sem dependências de runtime.
 //   npm run dev    -> tsx server/index.ts --dev (Vite em middleware mode, HMR no mesmo servidor)
 //   npm start      -> node dist/server/index.js (serve dist/client)
+import { readFileSync } from 'node:fs';
 import http from 'node:http';
 import { join } from 'node:path';
 import { codexDirsRefused, isDefaultDir } from './accounts/detect';
@@ -73,7 +74,7 @@ if (!config.inDocker) {
 const legacyEnv = legacyEnvWarning(Object.keys(process.env));
 if (legacyEnv) log.warn(legacyEnv);
 
-const names = new NameStore(join(config.dataDir, 'names.json'), { poolOnly: config.namesMode === 'pool' });
+const names = new NameStore(join(config.dataDir, 'names.json'));
 names.load();
 // Nomes de sala escolhidos pelo usuário (botão direito > Renomear).
 const roomAliases = new RoomAliases(join(config.dataDir, 'rooms.json'));
@@ -114,9 +115,23 @@ const accounts = new AccountsService({
   usageDir: config.usageDir,
   onChange: () => late.office?.markDirty(),
 });
+// HABBLAUD_NAMES=hermes: a lista do hermes-names.json vale desde o primeiro segundo (o HermesSource também a relê).
+if (config.namesMode === 'hermes') {
+  try {
+    const raw = JSON.parse(readFileSync(join(config.dataDir, 'hermes-names.json'), 'utf8')) as unknown;
+    const list = Array.isArray(raw) ? raw : ((raw as { pool?: unknown }).pool ?? []);
+    const pool = Array.isArray(list)
+      ? list.filter((n): n is string => typeof n === 'string' && !!n.trim()).map((n) => n.trim()).slice(0, 24)
+      : [];
+    names.setPool(pool);
+  } catch {
+    // sem arquivo (ou ilegível): os nomes continuam vindo do pool do Habblaud
+  }
+}
+
 const office = new Office({
   names,
-  poolNamesOnly: config.namesMode === 'pool',
+  namesMode: config.namesMode,
   roomAlias: (path) => roomAliases.get(path),
   version: config.version,
   // No modo dev o Vite serve o cliente direto do código-fonte: não há build para comparar.
