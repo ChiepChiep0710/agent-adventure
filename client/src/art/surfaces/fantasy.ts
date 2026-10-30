@@ -240,6 +240,75 @@ function paintMeadow(b: PixelBuf, x0: number, y0: number, seed: number): void {
   }
 }
 
+/** Areia da arena: areia batida e clara, com rastros de fricção, pegadas e pedrinhas (nada de sangue). */
+function paintArenaSand(b: PixelBuf, x0: number, y0: number, seed: number): void {
+  const tones = levels('#9d8762', '#cdb894', 10);
+  const pale = parseColor('#ddcaa6');
+  const dark = parseColor('#7d6a4c');
+  for (let py = 0; py < CHUNK_PX; py++) {
+    for (let px = 0; px < CHUNK_PX; px++) {
+      const wx = x0 + px;
+      const wy = y0 + py;
+      const n = noise(wx, wy, 17, seed) * 0.7 + noise(wx, wy, 5, seed + 4) * 0.3;
+      b.put(px, py, tones[Math.min(9, Math.floor(n * 10))]);
+    }
+  }
+  // Rastros: arcos curtos de areia revolvida (quem arrasta os pés na arena).
+  for (let i = 0; i < 7; i++) {
+    const cx = h3(i, 1, 31, seed) % CHUNK_PX;
+    const cy = h3(i, 2, 32, seed) % CHUNK_PX;
+    const len = 5 + (h3(i, 3, 33, seed) % 7);
+    for (let k = 0; k < len; k++) {
+      const x = (cx + k) % CHUNK_PX;
+      const y = (cy + Math.round(Math.sin((k / len) * Math.PI) * 2)) % CHUNK_PX;
+      b.put(x, y, k % 3 === 0 ? pale : dark);
+    }
+  }
+  // Pegadas em pares, alternando o pé.
+  for (let i = 0; i < 10; i++) {
+    const fx = h3(i, 4, 34, seed) % (CHUNK_PX - 4);
+    const fy = 2 + (h3(i, 5, 35, seed) % (CHUNK_PX - 5));
+    const dx = i % 2 ? 3 : 1;
+    for (const [ox, oy] of [[0, 0], [1, 0], [0, 1], [1, 1], [dx + 1, -2], [dx + 2, -2], [dx + 1, -1], [dx + 2, -1]] as const) {
+      b.put((fx + ox) % CHUNK_PX, (fy + oy + CHUNK_PX) % CHUNK_PX, dark);
+    }
+  }
+  // Pedrinhas e grãos mais claros.
+  for (let i = 0; i < 46; i++) {
+    const x = h3(i, 6, 36, seed) % CHUNK_PX;
+    const y = h3(i, 7, 37, seed) % CHUNK_PX;
+    b.put(x, y, i % 2 ? pale : parseColor('#8b7757'));
+  }
+}
+
+/** Chão de rocha escura do entorno da masmorra: lajeada irregular, cascalho e rachaduras. */
+function paintRockyGround(b: PixelBuf, x0: number, y0: number, seed: number): void {
+  const tones = levels('#3b3936', '#5c5852', 9);
+  const crack = parseColor('#26241f');
+  const dust = parseColor('#6e6a62');
+  for (let py = 0; py < CHUNK_PX; py++) {
+    for (let px = 0; px < CHUNK_PX; px++) {
+      const wx = x0 + px;
+      const wy = y0 + py;
+      // Lajes grandes (célula de 22px) com junta escura entre elas.
+      const cell = 22;
+      const ix = wx % cell;
+      const iy = wy % cell;
+      const slab = h3(Math.floor(wx / cell), Math.floor(wy / cell), 41, seed);
+      if (ix === cell - 1 || iy === cell - 1) {
+        b.put(px, py, crack);
+        continue;
+      }
+      const n = noise(wx, wy, 9, seed + (slab % 13)) * 0.6 + ((slab >>> 8) % 100) / 100 * 0.4;
+      let c = tones[Math.min(tones.length - 1, Math.floor(n * tones.length))];
+      // Rachaduras finas que atravessam as lajes.
+      if (noise(wx, wy, 26, seed + 77) > 0.82 && noise(wx, wy, 3, seed + 78) > 0.5) c = crack;
+      else if (h3(wx, wy, 42, seed) % 131 === 0) c = dust;
+      b.put(px, py, c);
+    }
+  }
+}
+
 /** Piso de fantasia no lugar de cada tipo de piso do escritório (mesmos lugares, outra matéria). */
 export function fantasyFloorChunk(kind: FloorKind, cx: number, cy: number, o: { seed: number; tint?: string }): PixelBuf {
   const b = new PixelBuf(CHUNK_PX, CHUNK_PX);
@@ -278,6 +347,14 @@ export function fantasyFloorChunk(kind: FloorKind, cx: number, cy: number, o: { 
     case 'street':
       paintCobble(b, x0, y0, o.seed + 1, '#4a4743', '#76716a');
       break;
+    case 'sand':
+      // Arena da masmorra: areia batida, riscada pelos pés de quem duela ali.
+      paintArenaSand(b, x0, y0, o.seed);
+      break;
+    case 'rock':
+      // Entorno da masmorra: rocha escura, sem grama nenhuma.
+      paintRockyGround(b, x0, y0, o.seed);
+      break;
     default:
       paintFlagstone(b, x0, y0, o.seed, '#6c6a66', '#a39e94', 0.05);
   }
@@ -298,6 +375,8 @@ export function fantasyCapColor(style: WallStyle): string {
   // Cerca viva/mata do acampamento: a "tampa" é a copa iluminada, não pedra.
   if (style.pattern === 'hedge') return mix('#3f6b38', fantasyStoneBase(style.base), 0.12);
   if (style.pattern === 'treeline') return mix('#24401f', fantasyStoneBase(style.base), 0.1);
+  // Masmorra: tampa de pedra quase preta (o teto da câmara some no escuro).
+  if (style.pattern === 'dungeon') return mix('#1c1a18', fantasyStoneBase(style.base), 0.16);
   return mix(style.exterior ? '#3a3633' : '#2f2b2a', fantasyStoneBase(style.base), 0.12);
 }
 
@@ -456,12 +535,119 @@ function treelineSouthTile(col: number): PixelBuf {
   return b;
 }
 
+// ------------------------------------------------------------------ masmorra
+
+/** Musgo e liquen das juntas (masmorra úmida). */
+const DUNGEON_MOSS = ['#3f4d2c', '#4e5d34'] as const;
+
+/**
+ * Alvenaria da masmorra: blocos GRANDES e irregulares (6–9 px de altura, 8–13 de largura),
+ * em fiadas desencontradas, com argamassa escura, musgo nas juntas de baixo e rachaduras.
+ * Trabalha em coordenadas de MUNDO (wx0 = x0 do tile), então as fiadas continuam de uma coluna
+ * para a outra sem emenda.
+ */
+function dungeonBlocks(b: PixelBuf, wx0: number, fy: number, fh: number, base: string, salt: number): void {
+  const mortar = shade(base, -0.46);
+  const tones = [shade(base, -0.1), shade(base, -0.04), shade(base, 0.02), shade(base, 0.06), shade(base, -0.16)];
+  b.rect(0, fy, TILE, fh, shade(base, -0.4));
+  let y = fy;
+  let row = 0;
+  while (y < fy + fh) {
+    const bh = Math.max(3, Math.min(fy + fh - y, 6 + (h3(wx0 >> 4, row, 51 + salt, 7) % 4)));
+    const off = h3(wx0 >> 4, row, 52 + salt, 7) % 14;
+    let bx = -off;
+    let k = 0;
+    while (bx < TILE) {
+      const bw = 8 + (h3((wx0 >> 4) * 31 + k, row, 53 + salt, 9) % 6);
+      const hsh = h3((wx0 >> 4) + k * 17, row * 13, 54 + salt, 11);
+      const tone = tones[hsh % tones.length];
+      const x0 = Math.max(0, bx);
+      const x1 = Math.min(TILE, bx + bw - 1);
+      for (let x = x0; x < x1; x++) {
+        for (let yy = y; yy < y + bh - 1; yy++) {
+          let c = tone;
+          if (yy === y) c = shade(tone, 0.09);
+          else if (yy === y + bh - 2) c = shade(tone, -0.11);
+          const sp = h3(wx0 + x, yy, hsh, 3) % 31;
+          if (sp === 0) c = shade(tone, -0.14);
+          else if (sp === 1) c = shade(tone, 0.05);
+          b.set(x, yy, c);
+        }
+      }
+      // Rachadura: uma por bloco, descendo torta do topo até a junta.
+      if (hsh % 11 === 0) {
+        let cx = x0 + 2 + (hsh % Math.max(1, x1 - x0 - 3));
+        for (let yy = y + 1; yy < y + bh - 1; yy++) {
+          b.set(Math.min(TILE - 1, Math.max(0, cx)), yy, mortar);
+          cx += h3(wx0 + cx, yy, hsh, 5) % 3 === 0 ? 1 : -1;
+        }
+      }
+      // Musgo no pé da parede e nas quinas que apanham umidade.
+      if (y + bh > fy + fh - 9 && hsh % 5 < 2) {
+        const mx = x0 + (hsh % Math.max(1, x1 - x0));
+        for (let i = 0; i < 3; i++) b.set(Math.min(TILE - 1, mx + i), y + bh - 2 - (i % 2), DUNGEON_MOSS[i % 2]);
+      }
+      bx += bw;
+      k++;
+    }
+    if (y + bh - 1 < fy + fh) b.hline(0, TILE - 1, y + bh - 1, mortar);
+    y += bh;
+    row++;
+  }
+  // Umidade: manchas escuras e um ou outro brilho de poça.
+  for (let i = 0; i < 9; i++) {
+    const x = h3(wx0 + i, i, 55, salt) % TILE;
+    const yy = fy + (h3(wx0 + i, i + 1, 56, salt) % fh);
+    b.set(x, yy, i % 3 === 0 ? 'rgba(90,120,130,0.22)' : shade(base, -0.24));
+  }
+}
+
+/** Face da parede da masmorra: alvenaria escura + tampa de pedra com entulho. */
+function dungeonWallTile(style: WallStyle, variant: number, col: number): PixelBuf {
+  const b = new PixelBuf(TILE, WALL_FACE_H);
+  const fy = WALL_CAP_H;
+  const fh = WALL_FACE_H - WALL_CAP_H - BASEBOARD_H;
+  const base = fantasyStoneBase(style.base);
+  dungeonBlocks(b, col * TILE, fy, fh, base, variant % 7);
+  // Tampa: pedra escura com entulho (lajes soltas e cascalho no topo do muro).
+  const cap = mix('#1e1c1a', base, 0.18);
+  b.rect(0, 0, TILE, WALL_CAP_H, cap);
+  b.hline(0, TILE - 1, 0, shade(cap, 0.16));
+  for (let x = 0; x < TILE; x++) {
+    const h = h3(col * TILE + x, 0, 61, 5);
+    if (h % 4 === 0) b.set(x, 1, shade(cap, 0.1));
+    if (h % 9 === 0) b.set(x, 2, shade(cap, -0.12));
+  }
+  b.hline(0, TILE - 1, WALL_CAP_H - 1, shade(cap, -0.16));
+  // Rodapé: pedra gasta, com aresta iluminada e musgo entre as juntas.
+  const by = WALL_FACE_H - BASEBOARD_H;
+  b.rect(0, by, TILE, BASEBOARD_H, shade(base, -0.24));
+  b.hline(0, TILE - 1, by, shade(base, -0.06));
+  b.hline(0, TILE - 1, WALL_FACE_H - 1, shade(base, -0.4));
+  for (let x = 0; x < TILE; x++) if (h3(col * TILE + x, 1, 62, 5) % 7 === 0) b.set(x, by + 1, DUNGEON_MOSS[0]);
+  return b;
+}
+
+/** Mureta sul da masmorra: parapeito baixo de pedra, com musgo no pé. */
+function dungeonSouthTile(style: WallStyle, col: number): PixelBuf {
+  const b = new PixelBuf(TILE, TILE);
+  const base = fantasyStoneBase(style.base);
+  const cap = mix('#1e1c1a', base, 0.2);
+  const capH = 6;
+  b.rect(0, 0, TILE, capH, cap);
+  b.hline(0, TILE - 1, 0, shade(cap, 0.16));
+  b.hline(0, TILE - 1, capH - 1, shade(cap, -0.14));
+  dungeonBlocks(b, col * TILE, capH, TILE - capH, shade(base, -0.08), 3);
+  return b;
+}
+
 /** Coluna de 16x32 da face da parede norte na skin de fantasia. */
 export function fantasyWallFaceTile(style: WallStyle, variant: number, col: number): PixelBuf {
   const pattern = style.pattern ?? 'plain';
   // Acampamento/core ao ar livre: nada de pedra de castelo — mata densa ou cerca viva.
   if (pattern === 'treeline') return treelineTile(col);
   if (pattern === 'hedge') return hedgeTile(col, WALL_FACE_H);
+  if (pattern === 'dungeon') return dungeonWallTile(style, variant, col);
   const b = new PixelBuf(TILE, WALL_FACE_H);
   const fy = WALL_CAP_H;
   const fh = WALL_FACE_H - WALL_CAP_H - BASEBOARD_H;
@@ -510,6 +696,7 @@ export function fantasySouthWallTile(style: WallStyle, col: number): PixelBuf {
   // Acampamento: o muro sul baixo é cerca viva (mata fechada quando é o limite do campo).
   if (style.pattern === 'hedge') return hedgeTile(col, TILE);
   if (style.pattern === 'treeline') return treelineSouthTile(col);
+  if (style.pattern === 'dungeon') return dungeonSouthTile(style, col);
   const b = new PixelBuf(TILE, TILE);
   const cap = fantasyCapColor(style);
   const capH = 6;

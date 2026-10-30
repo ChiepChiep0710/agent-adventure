@@ -13,7 +13,7 @@ import { FURNITURE, type Dir, type FurnitureKind, type RoomTheme, type WallStyle
 import { mulberry32 } from '../../../../shared/hash';
 import { DOOR_W, DOOR_X, TILE } from '../constants';
 import { AreaBuilder, type SpotOpts } from './builder';
-import { layoutProjectCamp } from './camp';
+import { layoutProjectArena } from './arena';
 import { slotRect, slotSide } from './geometry';
 import { isFantasy } from '../../art/skin';
 import type { AreaLayout, SpotDef, SpotKind } from './types';
@@ -271,10 +271,9 @@ export function layoutProjectRoom(room: RoomInput, theme: RoomTheme): AreaLayout
 }
 
 /**
- * Layout de um projeto conforme a skin: no escritório é a sala com paredes; na fantasia é um
- * acampamento ao ar livre no mesmo lote (mesmo contrato, então corredor, A* e simulação não mudam).
+ * Layout de um projeto conforme a skin: no escritório é a sala com paredes; na fantasia é uma
+ * câmara-arena da masmorra no mesmo lote (mesmo contrato, então corredor, A* e simulação não mudam).
  */
 export function layoutProject(room: RoomInput, theme: RoomTheme): AreaLayout {
-  // Import tardio: camp.ts precisa de `RoomInput` (tipo, apagado em runtime) e não de room.ts.
-  return isFantasy() ? layoutProjectCamp(room, theme) : layoutProjectRoom(room, theme);
+  return isFantasy() ? layoutProjectArena(room, theme) : layoutProjectRoom(room, theme);
 }

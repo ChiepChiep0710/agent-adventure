@@ -154,6 +154,30 @@ function build(kind: FurnitureKind, variant: string | undefined, state: number, 
       return O.plantSmall('fern', 0);
     case 'lantern_post':
       return O.floorLamp();
+    // Móveis que só existem na arena da masmorra (skin de fantasia): o escritório nunca os usa,
+    // mas o switch precisa ser total — daí o equivalente de mesmo footprint.
+    case 'brazier':
+      return O.trashBin();
+    case 'weapon_rack':
+      return O.bookshelf(0);
+    case 'armor_stand':
+      return O.filingCabinet();
+    case 'training_dummy':
+      return O.printer();
+    case 'cage':
+      return O.filingCabinet();
+    case 'chest':
+      return O.filingCabinet();
+    case 'bench_stone':
+      return C.bench();
+    case 'portcullis':
+      return W.doorFrame();
+    case 'chain':
+      return W.clock();
+    case 'wall_torch':
+      return W.clock();
+    case 'banner':
+      return W.poster('code');
   }
 }
 

@@ -161,6 +161,33 @@ function paintTile(b: PixelBuf, kind: FloorKind, tx: number, ty: number, o: Floo
       }
       break;
     }
+    case 'sand': {
+      // Areia batida (aditivo: arena da masmorra na fantasia). No escritório é só um piso neutro,
+      // para um kind novo nunca cair no cinza padrão caso alguém o use fora da skin.
+      const n = noise(tx * TILE, ty * TILE, 22, o.seed + 13);
+      const base = mix('#c9b48c', '#dbcaa6', n);
+      b.rect(0, 0, TILE, TILE, base);
+      for (let i = 0; i < 9; i++) {
+        const x = Math.floor(r(i) * TILE);
+        const y = Math.floor(r(i + 31) * TILE);
+        b.set(x, y, r(i + 61) < 0.5 ? shade(base, 0.04) : shade(base, -0.04));
+      }
+      b.hline(0, TILE - 1, TILE - 1, shade(base, -0.05));
+      break;
+    }
+    case 'rock': {
+      // Rocha escura (aditivo: entorno da masmorra na fantasia); no escritório, pedra neutra.
+      const n = noise(tx * TILE, ty * TILE, 18, o.seed + 17);
+      const base = mix('#6b6a66', '#86847e', n);
+      b.rect(0, 0, TILE, TILE, base);
+      for (let i = 0; i < 12; i++) {
+        const x = Math.floor(r(i) * TILE);
+        const y = Math.floor(r(i + 41) * TILE);
+        b.set(x, y, r(i + 71) < 0.5 ? shade(base, 0.05) : shade(base, -0.05));
+      }
+      b.hline(0, TILE - 1, TILE - 1, shade(base, -0.06));
+      break;
+    }
     case 'street': {
       const n = noise(tx * TILE, ty * TILE, 64, o.seed + 9);
       const col = mix('#4b4f58', '#565a63', n);

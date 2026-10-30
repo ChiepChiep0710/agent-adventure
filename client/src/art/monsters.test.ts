@@ -1,11 +1,13 @@
-// Testes da arte dos encontros (skin de fantasia): monstrinhos e efeitos desenhados em PixelBuf puro.
-// Garantem que todo quadro tem pixels visíveis, margem transparente para o contorno e quadros
-// realmente diferentes entre si (sem "animação" que não anima).
+// Testes da arte dos encontros (skin de fantasia): monstros e efeitos desenhados em PixelBuf puro.
+// Garantem que todo quadro tem pixels visíveis, margem transparente para o contorno, tamanho de
+// monstro de verdade (24 px) e quadros realmente diferentes entre si (sem "animação" que não anima).
 import { describe, expect, it } from 'vitest';
 import {
   ENCOUNTER_FRAMES,
   MONSTER_KINDS,
+  encounterArtSize,
   encounterFrame,
+  isFlyingMonster,
   renderEncounterArt,
   type EncounterArt,
 } from './monsters';
@@ -20,17 +22,22 @@ describe('arte dos encontros de RPG', () => {
         const bounds = buf.bounds();
         expect(bounds, `${name}#${frame}`).not.toBeNull();
         expect(buf.countOpaque(), `${name}#${frame}`).toBeGreaterThan(8);
-        // margem de 1px em pelo menos um lado para o contorno não ser cortado
-        expect(bounds!.x + bounds!.w, `${name}#${frame}`).toBeLessThanOrEqual(buf.w);
+        // margem de 1px para o contorno não ser cortado (o contorno é automático, 4-vizinhos)
+        expect(bounds!.x, `${name}#${frame}`).toBeGreaterThanOrEqual(0);
+        expect(bounds!.y, `${name}#${frame}`).toBeGreaterThanOrEqual(1);
+        expect(bounds!.x + bounds!.w, `${name}#${frame}`).toBeLessThanOrEqual(buf.w - 1);
         expect(bounds!.y + bounds!.h, `${name}#${frame}`).toBeLessThanOrEqual(buf.h);
         // âncora = pés do sprite: dentro da folha e encostada na base
-        expect(ax).toBeGreaterThan(0);
-        expect(ax).toBeLessThan(buf.w);
-        expect(ay).toBeGreaterThan(0);
-        expect(ay).toBeLessThanOrEqual(buf.h);
-        // a âncora fica junto da base do desenho (o morcego voa, então a folga é maior)
-        expect(bounds!.y + bounds!.h).toBeGreaterThan(ay - 8);
-        expect(bounds!.y).toBeLessThan(ay);
+        expect(ax, name).toBeGreaterThan(0);
+        expect(ax, name).toBeLessThan(buf.w);
+        expect(ay, name).toBeGreaterThan(0);
+        expect(ay, name).toBeLessThanOrEqual(buf.h);
+        // A âncora fica junto da base do desenho — só vale para o que pisa no chão (monstros e efeitos
+        // com âncora nos pés). Projéteis (bola de fogo, adaga, feixe, estrela) são centrados na âncora.
+        if (ay === buf.h - 1) {
+          expect(bounds!.y + bounds!.h, `${name}#${frame}`).toBeGreaterThan(ay - 14);
+          expect(bounds!.y, `${name}#${frame}`).toBeLessThan(ay - 2);
+        }
       }
     }
   });
@@ -47,13 +54,35 @@ describe('arte dos encontros de RPG', () => {
     }
   });
 
-  it('os três monstrinhos têm quadros de animação e desenho próprio', () => {
-    expect(MONSTER_KINDS).toEqual(['slime', 'bat', 'golem']);
-    const first = MONSTER_KINDS.map((k) => renderEncounterArt(k, 0).buf);
-    for (let i = 1; i < first.length; i++) {
-      expect(first[i].data.some((b, j) => b !== first[0].data[j])).toBe(true);
+  it('são oito monstros, cada um com 4 quadros e 24 px de folha', () => {
+    expect(MONSTER_KINDS).toEqual(['slime', 'bat', 'golem', 'skeleton', 'goblin', 'whelp', 'mimic', 'wisp']);
+    for (const kind of MONSTER_KINDS) {
+      expect(ENCOUNTER_FRAMES[kind], kind).toBe(4);
+      expect(encounterArtSize(kind), kind).toBe(24);
+      const { buf } = renderEncounterArt(kind, 0);
+      expect(buf.w, kind).toBe(24);
+      expect(buf.h, kind).toBe(24);
     }
-    for (const kind of MONSTER_KINDS) expect(ENCOUNTER_FRAMES[kind]).toBe(3);
+  });
+
+  it('cada monstro tem silhueta própria e é legível (não é um borrão de poucos pixels)', () => {
+    const first = MONSTER_KINDS.map((k) => renderEncounterArt(k, 0).buf);
+    for (let i = 0; i < first.length; i++) {
+      // tamanho visível suficiente para ler no zoom padrão
+      const b = first[i].bounds()!;
+      expect(b.w, MONSTER_KINDS[i]).toBeGreaterThanOrEqual(11);
+      expect(b.h, MONSTER_KINDS[i]).toBeGreaterThanOrEqual(9);
+      expect(first[i].countOpaque(), MONSTER_KINDS[i]).toBeGreaterThan(60);
+      for (let j = i + 1; j < first.length; j++) {
+        expect(first[i].data.some((byte, k) => byte !== first[j].data[k]), `${MONSTER_KINDS[i]} x ${MONSTER_KINDS[j]}`).toBe(true);
+      }
+    }
+  });
+
+  it('morcego e espectro voam; o resto anda no chão', () => {
+    expect(isFlyingMonster('bat')).toBe(true);
+    expect(isFlyingMonster('wisp')).toBe(true);
+    for (const k of ['slime', 'golem', 'skeleton', 'goblin', 'whelp', 'mimic'] as const) expect(isFlyingMonster(k)).toBe(false);
   });
 
   it('o quadro pedido é normalizado dentro do ciclo (aceita qualquer inteiro)', () => {
@@ -65,19 +94,27 @@ describe('arte dos encontros de RPG', () => {
       expect(encounterFrame(name, -1)).toBe(n - 1);
       expect(encounterFrame(name, 7.9)).toBe(7 % n);
     }
-    // renderizar um quadro fora do ciclo devolve o mesmo desenho do quadro normalizado
-    expect(renderEncounterArt('slime', 3).buf.data).toEqual(renderEncounterArt('slime', 0).buf.data);
+    expect(renderEncounterArt('slime', 4).buf.data).toEqual(renderEncounterArt('slime', 0).buf.data);
   });
 
   it('o baú tem três estágios (fechado, abrindo, aberto)', () => {
     const closed = renderEncounterArt('chest', 0).buf;
     const open = renderEncounterArt('chest', 2).buf;
-    // o aberto mostra o interior escuro: menos pixels dourados no topo do que o fechado
-    const topGold = (buf: typeof closed) => {
+    const topOpaque = (buf: typeof closed) => {
       let n = 0;
       for (let y = 2; y < 8; y++) for (let x = 0; x < buf.w; x++) if (buf.data[(y * buf.w + x) * 4 + 3] > 0) n++;
       return n;
     };
-    expect(topGold(open)).toBeGreaterThan(topGold(closed));
+    expect(topOpaque(open)).toBeGreaterThan(topOpaque(closed));
+  });
+
+  it('as peças de combate novas existem e animam (fogo, adaga, luz, martelo, ouro, vitória)', () => {
+    for (const art of ['fireball', 'dagger', 'lightbeam', 'smash', 'goldburst', 'victory'] as const) {
+      expect(ENCOUNTER_FRAMES[art], art).toBe(3);
+      const a = renderEncounterArt(art, 0).buf;
+      const b = renderEncounterArt(art, 2).buf;
+      expect(a.countOpaque(), art).toBeGreaterThan(3);
+      expect(a.data.some((byte, i) => byte !== b.data[i]), art).toBe(true);
+    }
   });
 });

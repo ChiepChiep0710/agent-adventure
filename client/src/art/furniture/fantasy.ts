@@ -2084,7 +2084,7 @@ export function logSeat(): BufFurniture {
   return { base: s };
 }
 
-/** Bancada de artesão 2x1 (lugar de trabalho de quem senta ao sul): tampa, ferramentas e vela. */
+/** Mesa de guerra 2x1 (lugar de trabalho de quem senta ao sul): tampa, armas largadas e vela. */
 export function campTable(variant: string | undefined, seed: number): BufFurniture {
   const s = floorSheet(2, 1, 20);
   const b = s.buf;
@@ -2110,13 +2110,21 @@ export function campTable(variant: string | undefined, seed: number): BufFurnitu
   for (let i = 0; i < 6; i++) b.set(14 + Math.floor(r() * 8), -2 - Math.floor(r() * 2), '#c9a06a');
   candle(b, 30, -3, 5, 2);
   scroll(b, 2, -4, 6, 3);
+  // Armas largadas na mesa: espada curta e escudo de madeira com umbo de ferro.
+  b.vline(17, -12, -4, '#cfd6df');
+  b.vline(18, -12, -4, '#9aa3af');
+  b.hline(15, 20, -4, F.gold);
+  b.rect(17, -3, 2, 2, F.leather);
+  b.ellipse(25, -8, 4.4, 3.6, F.oakDark.base);
+  b.ellipse(25, -8, 2.8, 2.2, F.iron.base);
+  b.set(25, -9, F.gold);
   b.outline();
   underRect(b, 2, 8, 28, 8, 'rgba(30,26,20,0.18)');
   contact(b, 0, 14, 32, 3, 0.22);
   return { base: s };
 }
 
-/** Bancada vista por trás (lugar de trabalho de quem senta ao norte): travessa e ferramentas baixas. */
+/** Mesa de guerra vista por trás (lugar de trabalho de quem senta ao norte): travessa, maça e lanterna. */
 export function campTableBack(variant: string | undefined, seed: number): BufFurniture {
   const s = floorSheet(2, 1, 16);
   const b = s.buf;
@@ -2131,7 +2139,7 @@ export function campTableBack(variant: string | undefined, seed: number): BufFur
   b.hline(2, 29, 8, m.edge.dk);
   b.hline(3, 28, 10, m.edge.lt);
   woodTop(b, -1, -5, 34, 12, m.top, seed);
-  // Vigas empilhadas, mapa enrolado e lanterna acesa.
+  // Vigas empilhadas, mapa enrolado, maça de ferro e lanterna acesa.
   b.rect(3, -8, 12, 3, CAMP.barkLt);
   b.hline(3, 14, -8, '#8f6a45');
   b.hline(3, 14, -6, CAMP.barkDk);
@@ -2341,6 +2349,380 @@ export function lanternPost(): BufFurniture {
   return { base: s };
 }
 
+// ------------------------------------------------------------------ arena da masmorra
+
+/** Braseiro 1x1: tripé de ferro, cuba com brasas e chamas. Ilumina a arena (rects.glow). */
+export function brazier(): BufFurniture {
+  const s = floorSheet(1, 1, 10);
+  const b = s.buf;
+  const r = rngOf(7, 61);
+  b.ellipse(8, 15, 6.5, 2, 'rgba(22,18,16,0.32)');
+  // Tripé de ferro (três pernas abertas) e aro de reforço.
+  b.line(8, 8, 4, 15, F.ironDark.base, 1);
+  b.line(8, 8, 12, 15, F.ironDark.base, 1);
+  b.line(8, 8, 8, 15, F.ironDark.dk, 1);
+  b.hline(5, 11, 14, F.ironDark.base);
+  b.set(4, 15, F.ironDark.dk);
+  b.set(12, 15, F.ironDark.dk);
+  // Cuba: borda de ferro batido com rebites.
+  b.ellipse(8, 8.5, 6.4, 3.4, F.iron.base);
+  b.ellipse(8, 8.2, 5.4, 2.6, '#241f1b');
+  b.hline(3, 13, 6, F.iron.lt);
+  for (const x of [3, 8, 13]) b.set(x, 9, F.ironDark.dk);
+  // Brasas e cinza.
+  for (let i = 0; i < 14; i++) {
+    const a = r() * Math.PI * 2;
+    const d = r() * 4.4;
+    b.set(Math.round(8 + Math.cos(a) * d), Math.round(8 + Math.sin(a) * d * 0.5), ['#ffb648', '#ff8a3c', '#e0602a', '#6b6b6b'][i % 4]);
+  }
+  // Chamas (a maior no centro) e brasa solta no chão.
+  flame(b, 8, 7, 7);
+  flame(b, 5, 8, 4);
+  flame(b, 11, 8, 5);
+  b.set(12, 13, '#ff8a3c');
+  b.set(13, 14, 'rgba(255,138,60,0.5)');
+  b.outline();
+  s.rects = { glow: rectAt(s, 1, -1, 14, 12) };
+  return { base: s };
+}
+
+/** Armação de armas 2x1: moldura de madeira com espadas, lança, machado e escudo. */
+export function weaponRack(): BufFurniture {
+  const s = floorSheet(2, 1, 18);
+  const b = s.buf;
+  // Montantes e travessas.
+  for (const x of [1, 29]) {
+    b.rect(x, -16, 3, 31, F.oakDark.base);
+    b.vline(x, -16, 14, F.oakDark.lt);
+    b.vline(x + 2, -16, 14, F.oakDark.dd);
+  }
+  b.rect(1, -16, 31, 3, F.oldWood.base);
+  b.hline(1, 31, -16, F.oldWood.hi);
+  b.rect(1, -3, 31, 3, F.oldWood.base);
+  b.hline(1, 31, -3, F.oldWood.hi);
+  // Espada longa ao centro-esquerda: lâmina, guarda e punho.
+  b.vline(10, -14, -6, '#cfd6df');
+  b.vline(11, -14, -6, '#9aa3af');
+  b.hline(8, 13, -6, F.gold);
+  b.rect(10, -5, 2, 3, F.leather);
+  b.set(10, -2, F.gold);
+  // Lança à direita: haste e ponta de ferro.
+  b.vline(21, -15, 0, CAMP.bark);
+  b.vline(22, -15, 0, CAMP.barkDk);
+  b.rect(21, -17, 2, 3, '#cfd6df');
+  b.set(21, -18, '#eef2f6');
+  // Machado de guerra encostado à esquerda (cabo + lâmina).
+  b.vline(5, -14, 0, CAMP.bark);
+  b.rect(2, -13, 4, 4, F.iron.base);
+  b.hline(2, 5, -13, F.iron.lt);
+  b.set(1, -12, F.iron.dk);
+  // Escudo redondo pendurado na travessa de baixo.
+  b.ellipse(16, -1, 4.4, 3.6, F.oakDark.base);
+  b.ellipse(16, -1, 3, 2.4, F.iron.base);
+  b.set(16, -2, F.gold);
+  b.outline();
+  contact(b, 0, 14, 32, 3, 0.24);
+  return { base: s };
+}
+
+/** Manequim de armadura 1x1: base de madeira, peitoral, ombreiras, elmo e lança. */
+export function armorStand(): BufFurniture {
+  const s = floorSheet(1, 1, 20);
+  const b = s.buf;
+  b.ellipse(8, 15, 6.4, 2, 'rgba(22,18,16,0.3)');
+  // Base e mastro.
+  b.rect(4, 13, 9, 2, F.oakDark.base);
+  b.hline(4, 12, 13, F.oakDark.lt);
+  b.vline(8, 12, -8, F.oakDark.dk);
+  // Peitoral de aço com talhe e rebites.
+  b.rect(5, -6, 7, 9, F.iron.base);
+  b.rect(6, -5, 5, 7, F.iron.lt);
+  b.hline(5, 11, -6, '#d5dbe2');
+  b.vline(8, -6, 2, F.iron.dk);
+  b.set(6, -4, F.ironDark.dk);
+  b.set(10, -4, F.ironDark.dk);
+  // Ombreiras arredondadas.
+  for (const [cx, sgn] of [[4, -1], [11, 1]] as const) {
+    b.ellipse(cx + (sgn < 0 ? 0.5 : -0.5), -6, 2.6, 2, F.iron.base);
+    b.set(cx + (sgn < 0 ? 0.5 : -0.5), -8, F.iron.lt);
+  }
+  // Elmo fechado no topo do mastro.
+  b.rect(6, -13, 5, 5, F.iron.base);
+  b.hline(6, 10, -13, '#d5dbe2');
+  b.vline(8, -12, -9, '#20242a');
+  b.hline(6, 10, -9, F.iron.dk);
+  b.set(8, -14, F.gold);
+  // Lança encostada.
+  b.vline(12, -18, 2, CAMP.bark);
+  b.rect(12, -20, 1, 3, '#cfd6df');
+  b.set(12, -21, '#eef2f6');
+  b.outline();
+  contact(b, 3, 14, 11, 3, 0.22);
+  return { base: s };
+}
+
+/** Boneco de treino 1x1: poste, tronco de palha, braços de travessa e espada fincada ao lado. */
+export function trainingDummy(): BufFurniture {
+  const s = floorSheet(1, 1, 16);
+  const b = s.buf;
+  const r = rngOf(11, 67);
+  b.ellipse(8, 15, 6.2, 2, 'rgba(22,18,16,0.3)');
+  // Poste e base de pedra.
+  b.rect(7, 4, 3, 11, CAMP.bark);
+  b.vline(7, 4, 14, CAMP.barkLt);
+  b.vline(9, 4, 14, CAMP.barkDk);
+  b.rect(4, 13, 9, 2, F.stone.base);
+  b.hline(4, 12, 13, F.stone.lt);
+  // Tronco de palha com cordas.
+  b.rect(3, -8, 11, 11, '#c2a05c');
+  b.hline(3, 13, -8, '#d8bb78');
+  b.hline(3, 13, 2, '#9c7c40');
+  for (const y of [-5, -1]) {
+    b.hline(3, 13, y, '#8a6636');
+    b.set(4, y, '#a8814a');
+  }
+  // Braços de travessa e alvo pintado no peito.
+  b.rect(0, -6, 4, 2, CAMP.bark);
+  b.rect(13, -6, 4, 2, CAMP.bark);
+  b.ellipse(8, -3, 2.4, 2.2, '#f2e6c8');
+  b.ellipse(8, -3, 1.2, 1.1, '#a8352f');
+  // Cabeça de estopa e palha solta.
+  b.ellipse(8, -11, 3.4, 2.8, '#d8bb78');
+  b.hline(6, 10, -12, '#e6cd90');
+  for (let i = 0; i < 5; i++) b.set(2 + Math.floor(r() * 12), -1 + Math.floor(r() * 3), '#e6cd90');
+  // Espada cravada no chão.
+  b.vline(14, -6, 13, '#cfd6df');
+  b.hline(12, 15, -6, F.gold);
+  b.set(14, -7, '#eef2f6');
+  b.outline();
+  contact(b, 2, 14, 13, 3, 0.22);
+  return { base: s };
+}
+
+/** Jaula 1x1: base de pedra, grades de ferro e vão escuro (canto da câmara). */
+export function cage(): BufFurniture {
+  const s = floorSheet(1, 1, 20);
+  const b = s.buf;
+  const r = rngOf(13, 71);
+  b.ellipse(8, 15, 6.4, 2, 'rgba(22,18,16,0.3)');
+  // Base e teto de pedra.
+  b.rect(1, 12, 14, 3, F.stone.base);
+  b.hline(1, 14, 12, F.stone.lt);
+  b.rect(2, -10, 12, 3, F.stone.base);
+  b.hline(2, 13, -10, F.stone.lt);
+  b.hline(2, 13, -8, F.stone.dk);
+  // Vão escuro.
+  b.rect(2, -7, 12, 19, '#171310');
+  for (let i = 0; i < 8; i++) b.set(3 + Math.floor(r() * 10), -4 + Math.floor(r() * 12), '#241d18');
+  // Grades verticais e travessa horizontal.
+  for (const x of [2, 5, 8, 11, 13]) {
+    b.vline(x, -8, 11, F.iron.base);
+    b.set(x, -8, F.iron.lt);
+    b.set(x, 11, F.ironDark.dk);
+  }
+  b.hline(2, 13, 0, F.iron.base);
+  b.hline(2, 13, -6, F.ironDark.dk);
+  // Fecho e argola.
+  b.rect(7, 1, 3, 2, F.ironDark.base);
+  b.set(8, 1, F.gold);
+  b.outline();
+  contact(b, 1, 14, 14, 3, 0.22);
+  return { base: s };
+}
+
+/** Baú de tesouro FECHADO 1x1: madeira, ferragens, fechadura e moedas no chão. */
+export function treasureChest(): BufFurniture {
+  const s = floorSheet(1, 1, 10);
+  const b = s.buf;
+  b.ellipse(8, 15, 6.4, 2, 'rgba(22,18,16,0.3)');
+  // Corpo de tábuas.
+  b.rect(2, 6, 12, 8, F.oakDark.base);
+  b.hline(2, 13, 6, F.oakDark.lt);
+  b.hline(2, 13, 13, F.oakDark.dd);
+  for (const x of [5, 8, 11]) b.vline(x, 7, 12, F.oakDark.dk);
+  // Tampa arredondada, fechada.
+  b.rect(2, 1, 12, 5, F.oldWood.base);
+  b.hline(2, 13, 1, F.oldWood.hi);
+  b.ellipse(8, 2, 6, 2.2, F.oldWood.lt);
+  for (let x = 3; x < 13; x += 3) b.set(x, 3, F.oldWood.dk);
+  // Aros e fechadura.
+  for (const x of [3, 12]) {
+    b.rect(x, 1, 2, 13, F.iron.base);
+    b.set(x, 13, F.ironDark.dk);
+  }
+  b.rect(7, 5, 3, 4, F.iron.base);
+  b.hline(7, 9, 5, F.iron.lt);
+  b.set(8, 7, '#241f1b');
+  b.set(8, 9, F.gold);
+  // Moedas espalhadas na base.
+  for (const [x, y] of [[1, 13], [13, 14], [2, 15], [5, 14]] as const) {
+    b.set(x, y, F.gold);
+    b.set(x + 1, y, shade(F.gold, -0.2));
+  }
+  b.outline();
+  contact(b, 1, 14, 14, 3, 0.24);
+  return { base: s };
+}
+
+/** Banco de pedra 2x1 (assento dos espectadores da arena): laje sobre dois blocos, com musgo. */
+export function benchStone(): BufFurniture {
+  const s = floorSheet(2, 1, 10);
+  const b = s.buf;
+  const r = rngOf(17, 73);
+  // Dois blocos de apoio.
+  for (const x of [2, 25]) {
+    b.rect(x, 6, 5, 9, F.stone.base);
+    b.hline(x, x + 4, 6, F.stone.lt);
+    b.vline(x + 4, 6, 14, F.stone.dk);
+    b.hline(x, x + 4, 14, F.stone.dd);
+  }
+  // Laje do assento: topo claro, frente escura.
+  b.rect(0, 0, 32, 8, F.stone.base);
+  b.hline(0, 31, 0, F.stone.hi);
+  b.hline(1, 30, 1, F.stone.lt);
+  b.hline(0, 31, 7, F.stone.dk);
+  b.hline(0, 31, 8, F.stone.dd);
+  // Rachaduras e musgo nas quinas.
+  b.hline(6, 12, 5, F.stone.dk);
+  b.set(18, 3, F.stone.dk);
+  b.set(19, 4, F.stone.dk);
+  for (const [x, y] of [[1, 2], [14, 1], [29, 2], [9, 7]] as const) b.set(x, y, r() < 0.5 ? CAMP.leafDk : CAMP.leaf);
+  b.outline();
+  contact(b, 0, 13, 32, 3, 0.22);
+  return { base: s };
+}
+
+/** Grade levadiça 2 tiles: vão escuro, barras de ferro, travessas e ferros em ponta na base. */
+export function portcullis(): BufFurniture {
+  const s = wallSheet(2, 3);
+  const b = s.buf;
+  const x0 = 1;
+  const y0 = -28;
+  const w = 30;
+  const h = 26;
+  // Vão escuro da passagem (a câmara além do portão).
+  b.rect(x0, y0, w, h, '#141110');
+  b.hline(x0, x0 + w - 1, y0, '#0d0b0a');
+  // Moldura de pedra em volta do vão.
+  b.rect(x0 - 2, y0 - 2, 2, h + 4, F.stone.base);
+  b.rect(x0 + w, y0 - 2, 2, h + 4, F.stone.base);
+  b.rect(x0 - 2, y0 - 3, w + 4, 3, F.stone.base);
+  b.hline(x0 - 2, x0 + w + 1, y0 - 3, F.stone.lt);
+  for (let x = x0 - 2; x < x0 + w + 2; x += 4) b.set(x, y0 - 2, F.stone.dk);
+  // Barras verticais e travessas horizontais de ferro.
+  for (let x = x0 + 1; x < x0 + w; x += 4) {
+    b.vline(x, y0, y0 + h - 1, F.iron.base);
+    b.set(x, y0, F.iron.lt);
+    b.set(x, y0 + h - 1, F.ironDark.dk);
+  }
+  for (const y of [y0 + 5, y0 + 13, y0 + 21]) {
+    b.hline(x0, x0 + w - 1, y, F.iron.base);
+    b.hline(x0, x0 + w - 1, y + 1, F.ironDark.dk);
+  }
+  // Pontas de ferro na base (parecem suspensas logo acima do chão).
+  for (let x = x0 + 1; x < x0 + w; x += 4) {
+    b.set(x, y0 + h, F.iron.lt);
+    b.set(x, y0 + h + 1, F.iron.dk);
+  }
+  // Corrente da qual a grade pende.
+  for (let y = y0 - 3; y < y0 + 2; y += 2) b.rect(15, y, 2, 1, F.ironDark.base);
+  b.outline();
+  return { base: s };
+}
+
+/** Corrente de parede 1 tile: argola, elos alternados e gancho na ponta. */
+export function chainItem(): BufFurniture {
+  const s = wallSheet(1);
+  const b = s.buf;
+  // Argola de fixação.
+  b.ellipse(8, -30, 3, 2, F.iron.base);
+  b.ellipse(8, -30, 1.6, 0.9, '#141110');
+  // Elos: alternando na vertical (um estreito, um largo).
+  let y = -28;
+  let i = 0;
+  while (y < -6) {
+    if (i % 2 === 0) {
+      b.rect(7, y, 2, 3, F.iron.base);
+      b.set(7, y, F.iron.lt);
+    } else {
+      b.rect(6, y, 4, 2, F.iron.base);
+      b.set(6, y, F.iron.lt);
+      b.set(9, y + 1, F.ironDark.dk);
+    }
+    y += i % 2 === 0 ? 3 : 2;
+    i++;
+  }
+  // Gancho na ponta.
+  b.rect(7, y, 2, 2, F.ironDark.base);
+  b.vline(8, y + 2, y + 4, F.iron.base);
+  b.set(9, y + 4, F.iron.lt);
+  b.set(7, y + 4, F.ironDark.dk);
+  b.outline();
+  return { base: s };
+}
+
+/** Archote de parede 1 tile: suporte de ferro, cabo de madeira, chama e halo (rects.glow). */
+export function wallTorch(): BufFurniture {
+  const s = wallSheet(1);
+  const b = s.buf;
+  // Suporte de ferro em "L" e chapa.
+  b.rect(6, -22, 2, 8, F.ironDark.base);
+  b.hline(6, 9, -15, F.iron.base);
+  b.set(9, -16, F.iron.lt);
+  b.rect(5, -14, 4, 2, F.ironDark.dk);
+  // Cabo de madeira inclinado para fora da parede.
+  b.line(7, -14, 9, -22, CAMP.bark, 2);
+  b.line(8, -14, 10, -22, CAMP.barkDk, 1);
+  // Chama e fagulhas.
+  flame(b, 10, -22, 6);
+  b.set(7, -27, 'rgba(255,182,72,0.5)');
+  b.set(12, -25, 'rgba(255,182,72,0.4)');
+  b.outline();
+  s.rects = { glow: rectAt(s, 5, -28, 8, 10) };
+  return { base: s };
+}
+
+/** Estandarte da casa 1 tile: haste, pano com brasão e barra recortada. variants = cor. */
+const BANNER_MATS: Readonly<Record<string, Ramp>> = {
+  red: ramp('#9c2f2c', 0.07),
+  blue: ramp('#2f4f86', 0.07),
+  green: ramp('#3d6b42', 0.07),
+  gold: ramp('#b0862f', 0.07),
+  violet: ramp('#5d3f80', 0.07),
+  teal: ramp('#2f7a7a', 0.07),
+};
+
+export function banner(variant: string | undefined): BufFurniture {
+  const m = BANNER_MATS[variant ?? 'red'] ?? BANNER_MATS.red;
+  const s = wallSheet(1);
+  const b = s.buf;
+  // Haste de ferro com ponteiras.
+  b.rect(1, -31, 14, 2, F.ironDark.base);
+  b.hline(1, 14, -31, F.iron.base);
+  for (const x of [1, 13]) b.set(x, -29, F.gold);
+  b.set(14, -30, F.gold);
+  // Pano: dois panos com sombra na dobra central.
+  b.rect(2, -29, 11, 20, m.base);
+  b.vline(2, -29, -10, m.lt);
+  b.vline(12, -29, -10, m.dd);
+  b.vline(7, -29, -10, m.dk);
+  b.hline(2, 12, -29, m.hi);
+  // Barra recortada (duas pontas em V) e fios soltos na ponta do pano.
+  for (let x = 2; x < 13; x++) {
+    const notch = x > 4 && x < 11 ? 2 : 0;
+    if (notch) b.clearRect(x, -10, 1, notch);
+    b.set(x, -11 + notch, m.dk);
+  }
+  for (const x of [3, 5, 9, 11]) b.set(x, -9, m.dk);
+  // Brasão: escudo de ouro com esmalte e uma espada.
+  b.rect(5, -25, 5, 6, F.gold);
+  b.rect(6, -24, 3, 4, m.dk);
+  b.vline(7, -24, -21, '#f2f4f8');
+  b.hline(6, 8, -22, '#d5dbe2');
+  b.outline();
+  return { base: s };
+}
+
 /** Móvel de fantasia do kind, ou undefined quando o kind não tem versão de fantasia. */
 export function fantasyBuild(kind: FurnitureKind, variant: string | undefined, state: number, seed: number): BufFurniture | undefined {
   switch (kind) {
@@ -2463,6 +2845,29 @@ export function fantasyBuild(kind: FurnitureKind, variant: string | undefined, s
       return campBush(variant);
     case 'lantern_post':
       return lanternPost();
+    // --- arena da masmorra
+    case 'brazier':
+      return brazier();
+    case 'weapon_rack':
+      return weaponRack();
+    case 'armor_stand':
+      return armorStand();
+    case 'training_dummy':
+      return trainingDummy();
+    case 'cage':
+      return cage();
+    case 'chest':
+      return treasureChest();
+    case 'bench_stone':
+      return benchStone();
+    case 'portcullis':
+      return portcullis();
+    case 'chain':
+      return chainItem();
+    case 'wall_torch':
+      return wallTorch();
+    case 'banner':
+      return banner(variant);
     default:
       return undefined;
   }

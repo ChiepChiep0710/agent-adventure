@@ -20,8 +20,13 @@ const REPLACED: FurnitureKind[] = [
   'bench', 'mirror', 'shelf_wall', 'sign', 'door_frame', 'light_switch', 'elevator',
 ];
 
-/** Kinds só do acampamento (sem equivalente no escritório): só precisam renderizar na fantasia. */
-const CAMP_ONLY: FurnitureKind[] = ['campfire', 'camp_table', 'camp_table_back', 'stump', 'log_seat', 'tent', 'quest_board', 'bedroll', 'crate', 'barrel', 'camp_tree', 'camp_bush', 'lantern_post'];
+/** Kinds só das câmaras de fantasia (sem equivalente no escritório): só precisam renderizar na fantasia. */
+const ARENA_ONLY: FurnitureKind[] = [
+  // acampamento (kinds antigos, ainda no catálogo)
+  'campfire', 'camp_table', 'camp_table_back', 'stump', 'log_seat', 'tent', 'quest_board', 'bedroll', 'crate', 'barrel', 'camp_tree', 'camp_bush', 'lantern_post',
+  // arena da masmorra
+  'brazier', 'weapon_rack', 'armor_stand', 'training_dummy', 'cage', 'chest', 'bench_stone', 'portcullis', 'chain', 'wall_torch', 'banner',
+];
 
 /** Resumo FNV-1a dos bytes (sprites iguais byte a byte dão o mesmo resumo). */
 function digest(data: Uint8ClampedArray): string {
@@ -60,7 +65,7 @@ describe('móveis da skin de fantasia', () => {
             expect(fantasy.base.ay, tag).toBeGreaterThan(0);
             expect(fantasy.base.ay - fantasy.base.buf.h, tag).toBeLessThanOrEqual(2 * TILE);
           }
-          if (CAMP_ONLY.includes(kind)) continue;
+          if (ARENA_ONLY.includes(kind)) continue;
           if (!REPLACED.includes(kind)) {
             // Kind sem versão de fantasia: continua idêntico ao do escritório.
             expect(digest(fantasy.base.buf.data), tag).toBe(digest(office.base.buf.data));
@@ -158,6 +163,33 @@ describe('móveis da skin de fantasia', () => {
     expect(g('v')).not.toBe(g('end'));
     const c = (v: string) => digest(renderFurniture('counter', v).base.buf.data);
     expect(c('plain')).not.toBe(c('drawers'));
+  });
+
+  it('a arena da masmorra tem sprites próprios e opacos (braseiro, armaria, tesouro e parede)', () => {
+    setSkinForTests('fantasy');
+    const floorKinds: FurnitureKind[] = ['brazier', 'weapon_rack', 'armor_stand', 'training_dummy', 'cage', 'chest', 'bench_stone'];
+    for (const kind of floorKinds) {
+      const f = renderFurniture(kind);
+      expect(FURNITURE[kind].mount, kind).toBe('floor');
+      expect(f.base.buf.countOpaque(), kind).toBeGreaterThan(60);
+      // a base do sprite assenta no chão do footprint (sombra de contato curta)
+      expect(f.base.buf.h - f.base.ay, kind).toBeLessThanOrEqual(5);
+    }
+    const wallKinds: FurnitureKind[] = ['portcullis', 'chain', 'wall_torch', 'banner'];
+    for (const kind of wallKinds) {
+      const f = renderFurniture(kind);
+      expect(FURNITURE[kind].mount, kind).toBe('wall');
+      expect(f.base.buf.countOpaque(), kind).toBeGreaterThan(40);
+      // itens de parede ficam acima da linha do rodapé (y = 0)
+      expect(f.base.ay - f.base.buf.h, kind).toBeLessThanOrEqual(2 * TILE);
+    }
+    // braseiro e tocha trazem a região de luz que o render usa
+    expect(renderFurniture('brazier').base.rects?.glow).toBeDefined();
+    expect(renderFurniture('wall_torch').base.rects?.glow).toBeDefined();
+    // os estandartes mudam de cor com a variante do tema
+    const red = renderFurniture('banner', 'red').base.buf.data;
+    const blue = renderFurniture('banner', 'blue').base.buf.data;
+    expect(digest(red)).not.toBe(digest(blue));
   });
 
   it('é determinístico: mesma seed, mesmo sprite', () => {

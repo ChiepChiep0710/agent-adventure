@@ -24,7 +24,7 @@ import { Particles } from './particles';
 import { carSprite, propSprite, shadowSprite } from './props';
 import { countBadge, fallbackIcon } from './shell-sprites';
 import { characterCostume, type FantasyClassInput } from './fantasy-class';
-import { drawEncounter, type EncounterActor } from './encounters';
+import { drawEncounter, heroHitPulse, type EncounterActor } from './encounters';
 import { shouldDrawRoadMarkings } from './skin-props';
 import { decorateElevator, drawSeasonalLights, drawSeasonalWindow, seasonalFurniture } from './seasonal';
 import { buildAreaVis, furnitureSprites, opaqueBounds, paintShell, toWallVis, WALL_MARGIN, wallItemOrigin, wallSprites, type AreaVis, type FurnVis, type WallVis } from './scene';
@@ -866,8 +866,10 @@ export class Renderer {
       seed: ch.info.seed,
       status: ch.info.status,
       activityKind: ch.info.activity?.kind,
+      error: ch.info.activity?.error === true,
       statusSince: ch.info.statusSince,
       moving: ch.step !== null,
+      seated: ch.seated,
     };
   }
 
@@ -926,6 +928,19 @@ export class Renderer {
       head.bw = 14;
       head.bh = 26;
       head.y = y - 26;
+    }
+    // Atividade que deu erro: o monstro acerta o herói e ele pisca em vermelho (mesmo pulso do
+    // contra-ataque da cena, então o flash casa com a cena de RPG desenhada logo abaixo).
+    if (isFantasy() && (ch.info.activity?.error === true || ch.info.activity?.kind === 'error')) {
+      const pulse = heroHitPulse(now, ch.info.seed);
+      if (pulse > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.32 * pulse * ch.alpha;
+        ctx.fillStyle = '#ff3344';
+        ctx.fillRect(head.bx, head.by, head.bw, head.bh);
+        ctx.restore();
+      }
     }
     // Skin de fantasia: a cena de RPG ao lado do herói (luta, forja, runas, batedor, guarda, baú ou
     // fogueira). É decoração derivada do status/atividade REAIS do agente; nada é inventado.

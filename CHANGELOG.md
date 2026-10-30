@@ -31,8 +31,17 @@ do meio (0.**3**.0).
   Na fantasia, cada projeto vira um **acampamento de aventureiros** ao ar livre (fogueira, barracas na cor do
   tema, bancadas e tocos em volta do fogo, quadro de missões, mata e cerca viva no lugar das paredes); corredor vira
   estrada de terra e o núcleo vira pátios de grama. E os agentes vivem **encontros de RPG** ligados à atividade real
-  (editando: luta com slime/golem; comando/teste: faíscas da bigorna; lendo: runas; web: morcego; entregue: baú de
-  tesouro), só decoração, sem inventar agentes nem status.
+  Os encontros são só decoração, derivados do status/atividade reais do agente (sem inventar nada): editando, o mago
+  lança bola de fogo no monstro; rodando comando/teste, o ferreiro martela o golem; lendo, o estudioso fere o espectro
+  com luz; navegando, o ladino atira adagas no morcego; esperando você, o cavaleiro segura o inimigo; ao entregar, o
+  baú se abre com chuva de moedas. Os monstros têm **barra de vida**, **números de dano** e **projéteis**, e a
+  iluminação fica mais escura, com poças de luz quente das tochas.
+- **Masmorra/arena na skin de fantasia.** Cada projeto vira uma **câmara de masmorra** com **arena de areia** no
+  centro (cercada de pedra e livre para o duelo), portão de ferro, correntes, tochas e estandartes na cor do tema,
+  mesas de guerra e tocos em volta da arena, armarinho de armas, manequim de treino, braseiros, jaula, baú e bancos de
+  pedra. Recepção vira salão de entrada, copa vira taverna subterrânea, banheiros viram câmara da fonte, lounge vira
+  sala de armas, o corredor vira galeria de tochas e o entorno vira rocha escura. O escritório (skin padrão) segue
+  igual.
 - **Nomes escolhidos para os agentes do Hermes** (`hermes-names.json`). Dois campos opcionais na pasta de dados do
   Habblaud: **`pool`** (estoque de nomes: cada agente novo, principal ou subagente, recebe um nome sorteado entre os
   ainda livres; esgotado, volta ao sorteio) e **`names`** (nome fixo por session id, que ganha do estoque). O arquivo é relido

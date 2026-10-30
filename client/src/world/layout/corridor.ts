@@ -1,5 +1,7 @@
 // Corredor que atravessa o prédio de oeste a leste, com bebedouros, bancos e plantas.
-// Na skin de fantasia vira a estrada de terra que liga os acampamentos, com grama nas bordas.
+// Na skin de fantasia vira o corredor da masmorra: calçamento de pedra, tochas nas pontas,
+// barris e caixotes no lugar das plantas e bancos de pedra no lugar dos bancos estofados.
+import type { FurnitureKind } from '../../art/api';
 import { isFantasy } from '../../art/skin';
 import { COL_W, CORE_COLS, CORRIDOR_H, CORRIDOR_Y } from '../constants';
 import { AreaBuilder } from './builder';
@@ -16,45 +18,54 @@ export function layoutCorridor(cols: number): AreaLayout {
   const w = cols * COL_W;
   const b = new AreaBuilder(CORRIDOR_ID, 'corridor', { x: 0, y: CORRIDOR_Y, w, h: CORRIDOR_H });
   const fan = isFantasy();
-  // fantasia: estrada de terra batida entre os acampamentos, com grama nas duas margens
-  b.floor(fan ? 'sidewalk' : 'concrete', 0, 0, w, CORRIDOR_H, 501);
+  // fantasia: corredor da masmorra — calçamento de pedra de ponta a ponta, sem grama
+  b.floor('concrete', 0, 0, w, CORRIDOR_H, 501);
   if (fan) {
-    b.floor('grass', 0, 0, w, 1, 503);
-    b.floor('grass', 0, CORRIDOR_H - 1, w, 1, 504);
-  }
-  // fachadas de vidro nas pontas do corredor (entrada principal a oeste)
-  for (let ly = 0; ly < CORRIDOR_H; ly++) {
-    b.furn('glass_partition', 0, ly, ly === 0 || ly === CORRIDOR_H - 1 ? 'end' : 'v', { order: 0.1 });
-    b.furn('glass_partition', w - 1, ly, ly === 0 || ly === CORRIDOR_H - 1 ? 'end' : 'v', { order: 0.1 });
+    // braseiros de ferro nas duas pontas (os "portões" da masmorra)
+    for (const ly of [0, CORRIDOR_H - 1]) {
+      b.furn('brazier', 0, ly, undefined, { order: 0.1 });
+      b.furn('brazier', w - 1, ly, undefined, { order: 0.1 });
+    }
+  } else {
+    // fachadas de vidro nas pontas do corredor (entrada principal a oeste)
+    for (let ly = 0; ly < CORRIDOR_H; ly++) {
+      b.furn('glass_partition', 0, ly, ly === 0 || ly === CORRIDOR_H - 1 ? 'end' : 'v', { order: 0.1 });
+      b.furn('glass_partition', w - 1, ly, ly === 0 || ly === CORRIDOR_H - 1 ? 'end' : 'v', { order: 0.1 });
+    }
   }
   b.walk(1, 0, w - 2, CORRIDOR_H);
 
+  // Na masmorra as plantas viram barris/caixotes de suprimento e os bancos viram bancos de pedra.
+  const benchKind: FurnitureKind = fan ? 'bench_stone' : 'bench';
+  const tallKind: FurnitureKind = fan ? 'barrel' : 'plant_tall';
+  const smallKind: FurnitureKind = fan ? 'crate' : 'plant_small';
   for (let c = 0; c < cols; c++) {
     const x = c * COL_W;
     const last = c === cols - 1;
     if (c === 0) {
-      b.furn('plant_tall', x + 2, 4, 'palm', { order: 0.5 });
-      b.furn('plant_small', x + 13, 4, 'flower', { order: 0.5 });
+      b.furn(tallKind, x + 2, 4, fan ? undefined : 'palm', { order: 0.5 });
+      b.furn(smallKind, x + 13, 4, fan ? undefined : 'flower', { order: 0.5 });
     } else if (c === 1) {
-      const bench = b.furn('bench', x + 2, 0, undefined, { order: 0.5 });
-      for (let i = 0; i < 2; i++) b.seat('bench', 'bench', x + 2 + i, 0, 'down', undefined, { noFurniture: true, furnitureId: bench });
-      b.furn('plant_tall', x + 13, 0, 'monstera', { order: 0.5 });
+      const bench = b.furn(benchKind, x + 2, 0, undefined, { order: 0.5 });
+      for (let i = 0; i < 2; i++) b.seat('bench', benchKind, x + 2 + i, 0, 'down', undefined, { noFurniture: true, furnitureId: bench });
+      b.furn(tallKind, x + 13, 0, fan ? undefined : 'monstera', { order: 0.5 });
     } else {
       // colunas de projeto alternam: bebedouro (pares) e banco de espera (ímpares)
       const k = c - CORE_COLS;
       if (k % 2 === 0) {
         b.furn('water_cooler', x + 3, 0, undefined, { order: 0.5 });
         b.spot('water', x + 3, 1, 'up', { dy: -3 });
-        b.furn('plant_small', x + 4, 0, SMALL[k % SMALL.length], { order: 0.5 });
+        b.furn(smallKind, x + 4, 0, fan ? undefined : SMALL[k % SMALL.length], { order: 0.5 });
       } else {
-        const bench = b.furn('bench', x + 11, 0, undefined, { order: 0.5 });
-        for (let i = 0; i < 2; i++) b.seat('bench', 'bench', x + 11 + i, 0, 'down', undefined, { noFurniture: true, furnitureId: bench });
-        b.furn('plant_tall', x + 13, 0, TALL[k % TALL.length], { order: 0.5 });
+        const bench = b.furn(benchKind, x + 11, 0, undefined, { order: 0.5 });
+        for (let i = 0; i < 2; i++) b.seat('bench', benchKind, x + 11 + i, 0, 'down', undefined, { noFurniture: true, furnitureId: bench });
+        b.furn(tallKind, x + 13, 0, fan ? undefined : TALL[k % TALL.length], { order: 0.5 });
       }
-      if (k % 2 === 1) b.furn('plant_small', x + 12, 4, SMALL[(k + 1) % SMALL.length], { order: 0.5 });
+      if (k % 2 === 1) b.furn(smallKind, x + 12, 4, fan ? undefined : SMALL[(k + 1) % SMALL.length], { order: 0.5 });
     }
-    // planta alta onde as paredes das salas se encontram (uma coluna sim, outra não)
-    if (!last && c % 2 === 1) b.furn('plant_tall', x + 15, 4, TALL[(c + 1) % TALL.length], { order: 0.5 });
+    // planta alta onde as paredes das salas se encontram (uma coluna sim, outra não; na
+    // masmorra não há canto de parede para apoiar barril)
+    if (!fan && !last && c % 2 === 1) b.furn('plant_tall', x + 15, 4, TALL[(c + 1) % TALL.length], { order: 0.5 });
     // passadeira estreita (um trecho por coluna), centrada no corredor
     b.rug(x + 2, 1.95, COL_W - 4, 1.1, RUNNERS[c % RUNNERS.length], 502 + c);
     // pontos de conversa no meio do corredor

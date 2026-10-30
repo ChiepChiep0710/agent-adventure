@@ -14,6 +14,7 @@ import type { RoomState } from '../sim/room-state';
 import type { Sim } from '../sim/sim';
 import { buildAnim } from './anim';
 import { ambientAt, ambientDistance, approachAmbient, effectiveHour, isNeutral, mixRgb, rgbCss, sunbeamAt, WHITE, type Ambient, type DaylightMode, type Rgb } from './daylight';
+import { dungeonAmbient, isTorchKind, TORCH_GLOW_MAX, TORCH_HALO_MAX, torchColor, torchFlicker, torchPool } from './dungeon-light';
 import { glowSprite } from './props';
 import { furnitureSprites, wallItemOrigin, wallSprites, type AreaVis, type FurnVis, type WallVis } from './scene';
 
@@ -25,7 +26,6 @@ const MAP_SCALE = 2;
 const FADE_MS = 1_200;
 /** Ocupação das áreas comuns (luz por presença) reavaliada a cada isto (ms). */
 const OCCUPANCY_MS = 250;
-const LAMP_WARM: Rgb = [255, 236, 196];
 const STREET_WARM: Rgb = [255, 214, 150];
 const SCREEN_COOL: Rgb = [196, 222, 255];
 const ARCADE_GLOW: Rgb = [236, 190, 255];
@@ -198,11 +198,19 @@ export class Lighting {
     return this.ambient.night;
   }
 
+  /**
+   * Ambiente usado no mapa de luz: na skin de fantasia o reino é uma masmorra (penumbra de pedra com
+   * poças de tocha), então o ambiente real é escurecido e esfriado; no escritório vai o de sempre.
+   */
+  private paintAmbient(): Ambient {
+    return isFantasy() ? dungeonAmbient(this.ambient) : this.ambient;
+  }
+
   // =================================================================== mapa de luz
 
   /** Multiplica o mapa de luz sobre o que está visível (nada de dia). */
   drawAmbient(ctx: CanvasRenderingContext2D, scene: LightScene, view: View, now: number, dt: number): void {
-    const amb = this.ambient;
+    const amb = this.paintAmbient();
     this.updateOccupancy(scene, now, dt);
     if (isNeutral(amb)) return;
     const map = this.ensureMap(scene, now);
@@ -320,8 +328,8 @@ export class Lighting {
 
   /** Tudo o que muda o mapa, em passos discretos (evita refazê-lo a cada frame). */
   private lightKey(scene: LightScene, now: number): string {
-    const a = this.ambient;
-    let k = `${Math.round(a.night * 200)}|${a.outside.join(',')}|${a.inside.join(',')}|${a.dim.join(',')}|${this.sim.building.cols}`;
+    const a = this.paintAmbient();
+    let k = `${isFantasy() ? 'd' : 'o'}|${Math.round(a.night * 200)}|${a.outside.join(',')}|${a.inside.join(',')}|${a.dim.join(',')}|${this.sim.building.cols}`;
     for (const vis of scene.areas.values()) {
       const { lit, cover } = this.areaLight(vis, now);
       k += `|${vis.id}:${Math.round(lit * 24)}:${Math.round(cover * 20)}`;
@@ -331,7 +339,7 @@ export class Lighting {
   }
 
   private paintMap(m: CanvasRenderingContext2D, scene: LightScene, now: number): void {
-    const amb = this.ambient;
+    const amb = this.paintAmbient();
     const n = amb.night;
     m.setTransform(1, 0, 0, 1, 0, 0);
     m.globalCompositeOperation = 'source-over';
@@ -384,25 +392,33 @@ export class Lighting {
     }
     // halos: luminárias acesas, máquinas, postes, a luz das janelas no gramado
     m.globalCompositeOperation = 'lighten';
-    const lamp = haloSprite(LAMP_WARM, 64);
     const street = haloSprite(STREET_WARM, 64);
     const cool = haloSprite(SCREEN_COOL, 48);
     const arcade = haloSprite(ARCADE_GLOW, 48);
+    const torch = haloSprite(torchColor(amb), 64);
     const k = Math.min(1, (n - 0.12) / 0.5);
     const halo = (img: HTMLCanvasElement, cx: number, cy: number, w: number, h: number, a: number) => {
       if (a <= 0.01) return;
       m.globalAlpha = Math.min(1, a);
       m.drawImage(img, cx - w / 2, cy - h / 2, w, h);
     };
+    // tochas/braseiros/fogueira: poças quentes que valem mesmo com a sala apagada (masmorra)
+    let torches = 0;
     for (const [vis, l] of lit) {
       // nas salas, só com a luz acesa; nas áreas comuns, abajures e máquinas ficam sempre ligados
       // (luz de vigia quando não há ninguém)
       const on = vis.room ? vis.room.lightOn && l >= 0.3 : true;
-      if (!on) continue;
       const a = vis.room ? k * l : k;
       for (const f of vis.furniture) {
-        if (f.kind === 'floor_lamp') halo(lamp, f.ax, f.ay - 6, 92, 66, a);
-        else if (f.kind === 'vending_machine') halo(cool, f.ax, f.ay + 4, 52, 34, 0.9 * a);
+        if (isTorchKind(f.kind)) {
+          if (torches >= TORCH_HALO_MAX) continue;
+          torches++;
+          const p = torchPool(f.kind);
+          halo(torch, f.ax, f.ay - p.lift, p.w, p.h, p.alpha * Math.max(0.55, a));
+          continue;
+        }
+        if (!on) continue;
+        if (f.kind === 'vending_machine') halo(cool, f.ax, f.ay + 4, 52, 34, 0.9 * a);
         else if (f.kind === 'arcade') halo(arcade, f.ax, f.ay + 4, 44, 30, 0.8 * a);
       }
     }
@@ -497,6 +513,7 @@ export class Lighting {
       }
     }
     this.drawSunbeams(ctx, scene, view);
+    this.drawTorches(ctx, scene, view, now);
     if (n > 0.2) {
       for (const prop of scene.exterior.props) {
         if (prop.kind !== 'lamp' || !inView(prop.x, prop.y, 64)) continue;
@@ -510,9 +527,35 @@ export class Lighting {
   }
 
   /**
+   * Brilhos das tochas, braseiros e da fogueira do acampamento: poças quentes que tremulam (só na
+   * skin de fantasia, onde o reino é uma masmorra). Com movimento reduzido a chama fica parada.
+   */
+  private drawTorches(ctx: CanvasRenderingContext2D, scene: LightScene, view: View, now: number): void {
+    if (!isFantasy()) return;
+    const warm = glowSprite('#ffcf7a', 64);
+    const core = glowSprite('#fff0c0', 24);
+    let n = 0;
+    for (const vis of scene.areas.values()) {
+      for (const f of vis.furniture) {
+        if (!isTorchKind(f.kind)) continue;
+        if (n >= TORCH_GLOW_MAX) return;
+        if (f.ax < view.x0 - 40 || f.ax > view.x1 + 40 || f.ay < view.y0 - 40 || f.ay > view.y1 + 40) continue;
+        n++;
+        const p = torchPool(f.kind);
+        const fl = torchFlicker(now, (f.seed ^ (f.ax | 0)) >>> 0, this.reduced);
+        const w = Math.round(p.w * 0.42 * fl);
+        const h = Math.round(w * 0.7);
+        ctx.globalAlpha = Math.min(1, 0.38 * fl * p.alpha);
+        ctx.drawImage(warm, Math.round(f.ax - w / 2), Math.round(f.ay - p.lift - h * 0.6), w, h);
+        ctx.globalAlpha = Math.min(1, 0.5 * fl);
+        ctx.drawImage(core, Math.round(f.ax - 12), Math.round(f.ay - p.lift - 8), 24, 18);
+      }
+    }
+  }
+
+  /**
    * Sol entrando pelas janelas da parede norte (o sol do Brasil passa ao norte): faixas de luz no
-   * piso, curtas ao meio-dia e longas e alaranjadas de manhã cedo e no fim da tarde; de manhã
-   * tombam para oeste, à tarde para leste.
+   * piso, curtas ao meio-dia e longas e alaranjadas de manhã cedo e no fim da tarde.
    */
   private drawSunbeams(ctx: CanvasRenderingContext2D, scene: LightScene, view: View): void {
     const sun = sunbeamAt(this.ambient.hour);

@@ -3,7 +3,8 @@ import { FURNITURE, TILE, type FurnitureKind, type RoomTheme } from '../../art/a
 import { setSkinForTests } from '../../art/skin';
 import { BUILDING_H, COL_W, CORRIDOR_Y, SOUTH_Y } from '../constants';
 import { assembleBuilding, coreAreas } from './building';
-import { campVariant, layoutProjectCamp } from './camp';
+import { FREE } from '../path/grid';
+import { arenaVariant, layoutProjectArena } from './arena';
 import { columnsFor, slotAt, slotColumn, slotRect, slotSide } from './geometry';
 import { layoutProject, layoutProjectRoom, roomVariant } from './room';
 import { layoutExterior, slotShell } from './exterior';
@@ -161,8 +162,12 @@ describe('layout do prédio', () => {
 });
 
 /** Móveis de chão altos que escondem o que está pendurado na parede logo atrás. */
-const TALL_FLOOR = new Set<FurnitureKind>(['plant_tall', 'bookshelf', 'binder_shelf', 'fridge', 'vending_machine', 'arcade', 'water_cooler', 'floor_lamp', 'toilet_stall']);
-const WALL_DECOR = new Set<FurnitureKind>(['painting', 'poster', 'window', 'tv', 'whiteboard', 'sign', 'clock', 'mirror', 'door_frame']);
+const TALL_FLOOR = new Set<FurnitureKind>([
+  'plant_tall', 'bookshelf', 'binder_shelf', 'fridge', 'vending_machine', 'arcade', 'water_cooler', 'floor_lamp', 'toilet_stall',
+  // masmorra: armação de armas, manequim e jaula também são altos
+  'weapon_rack', 'armor_stand', 'cage',
+]);
+const WALL_DECOR = new Set<FurnitureKind>(['painting', 'poster', 'window', 'tv', 'whiteboard', 'sign', 'clock', 'mirror', 'door_frame', 'portcullis', 'chain', 'wall_torch', 'banner']);
 
 /** Itens de parede decorativos com algum móvel alto encostado na frente (ids). */
 function hiddenWallItems(area: AreaLayout): string[] {
@@ -240,112 +245,128 @@ describe('itens de parede', () => {
   });
 });
 
-describe('acampamento de aventureiros (skin de fantasia)', () => {
-  /** Tema de fantasia (zona de floresta com musgo) — o acampamento usa o acento para a lona. */
-  const campTheme: RoomTheme = { ...theme, carpet: '#67705a', carpet2: '#5c6552', accent: '#8fbf6a', wall: { base: '#7c8371', trim: '#4d5344', pattern: 'plain' } };
-  const camp = (slot: number, seed: number) => layoutProjectCamp({ id: `/camp/${slot}/${seed}`, slot, seed }, campTheme);
+describe('arena da masmorra (skin de fantasia)', () => {
+  /** Tema de fantasia (masmorra: pedra escura e tochas avermelhadas) — a arena usa o acento no estandarte. */
+  const dungeonTheme: RoomTheme = { ...theme, carpet: '#43464a', carpet2: '#3b3e42', accent: '#b04a3a', wall: { base: '#5d5f60', trim: '#3a3c3d', pattern: 'plain' } };
+  const arena = (slot: number, seed: number) => layoutProjectArena({ id: `/arena/${slot}/${seed}`, slot, seed }, dungeonTheme);
 
   it('mantém o contrato da sala: mesma porta, 6 lugares de trabalho e os lugares extras', () => {
     for (const slot of [0, 1, 2, 3]) {
-      const room = layoutProjectRoom({ id: `/r/${slot}`, slot, seed: 900 + slot }, campTheme);
-      const c = camp(slot, 900 + slot);
-      expect(c.rect, `slot ${slot}`).toEqual(room.rect);
-      expect(c.door).toEqual(room.door);
-      expect(c.side).toBe(room.side);
-      expect(c.kind).toBe('room');
-      const desks = c.spots.filter((s) => s.kind === 'desk');
+      const room = layoutProjectRoom({ id: `/r/${slot}`, slot, seed: 900 + slot }, dungeonTheme);
+      const a = arena(slot, 900 + slot);
+      expect(a.rect, `slot ${slot}`).toEqual(room.rect);
+      expect(a.door).toEqual(room.door);
+      expect(a.side).toBe(room.side);
+      expect(a.kind).toBe('room');
+      const desks = a.spots.filter((s) => s.kind === 'desk');
       expect(desks).toHaveLength(6);
       expect(new Set(desks.map((d) => d.rank))).toEqual(new Set([0, 1, 2, 3, 4, 5]));
       expect(desks.filter((d) => d.side === 'N')).toHaveLength(3);
-      for (const d of desks) expect(c.furniture.some((f) => f.id === d.deskId)).toBe(true);
-      expect(c.spots.filter((s) => s.kind === 'stool' || s.kind === 'nook').length).toBeGreaterThanOrEqual(4);
-      expect(c.spots.filter((s) => s.kind === 'stand').length).toBeGreaterThanOrEqual(3);
-      expect(c.spots.filter((s) => s.kind === 'switch')).toHaveLength(1);
-      expect(c.spots.some((s) => s.kind === 'whiteboard')).toBe(true);
-      expect(c.wallItems.some((w) => w.kind === 'sign')).toBe(true);
-      expect(c.signId).toBe(c.wallItems.find((w) => w.kind === 'sign')?.id);
+      for (const d of desks) expect(a.furniture.some((f) => f.id === d.deskId)).toBe(true);
+      expect(a.spots.filter((s) => s.kind === 'stool' || s.kind === 'nook').length).toBeGreaterThanOrEqual(4);
+      expect(a.spots.filter((s) => s.kind === 'stand').length).toBeGreaterThanOrEqual(3);
+      expect(a.spots.filter((s) => s.kind === 'switch')).toHaveLength(1);
+      expect(a.spots.some((s) => s.kind === 'whiteboard')).toBe(true);
+      expect(a.wallItems.some((w) => w.kind === 'sign')).toBe(true);
+      expect(a.signId).toBe(a.wallItems.find((w) => w.kind === 'sign')?.id);
     }
   });
 
-  it('vira um campo ao ar livre: grama, trilha, fogueira, bancadas, barracas e quadro de missões', () => {
-    const c = camp(0, 1234);
-    expect(c.floors.some((f) => f.kind === 'grass')).toBe(true);
-    expect(c.floors.some((f) => f.kind === 'sidewalk')).toBe(true);
-    // nada de piso de escritório no campo
-    const indoor = c.floors.filter((f) => ['marble', 'carpet', 'tile_check', 'tile_white', 'concrete'].includes(f.kind));
+  it('é uma câmara de masmorra: pedra, areia no poço, mesas de guerra, armaria e tesouro', () => {
+    const a = arena(0, 1234);
+    // piso: lajes da câmara, borda de pedra e areia do poço da arena
+    const kinds = a.floors.map((f) => f.kind);
+    expect(kinds).toContain('marble');
+    expect(kinds).toContain('concrete');
+    expect(kinds).toContain('sand');
+    // nada de piso de escritório (nem grama) na câmara
+    const indoor = a.floors.filter((f) => ['carpet', 'tile_check', 'tile_white', 'grass', 'sidewalk'].includes(f.kind));
     expect(indoor).toEqual([]);
-    expect(c.floorTint).toBeUndefined();
-    const kinds = new Set(c.furniture.map((f) => f.kind));
-    for (const k of ['campfire', 'camp_table', 'camp_table_back', 'stump', 'tent', 'quest_board', 'bedroll', 'crate', 'camp_tree', 'lantern_post'] as const) {
-      expect(kinds.has(k), k).toBe(true);
+    // paredes e mureta: pedra de masmorra (blocos irregulares), nada de mata nem cerca viva
+    expect(a.walls.every((w) => w.style.pattern === 'dungeon')).toBe(true);
+    expect(a.walls.some((w) => w.kind === 'face')).toBe(true);
+    expect(a.walls.some((w) => w.kind === 'south')).toBe(true);
+    // 6 mesas de guerra (3 de cada lado do poço) e os móveis da câmara
+    const fk = new Set(a.furniture.map((f) => f.kind));
+    for (const k of ['camp_table', 'camp_table_back', 'brazier', 'weapon_rack', 'armor_stand', 'training_dummy', 'bench_stone', 'crate', 'barrel'] as const) {
+      expect(fk.has(k), k).toBe(true);
     }
-    // os 6 lugares de trabalho sentam em tocos, à volta das bancadas/fogueira
-    expect(c.furniture.filter((f) => f.kind === 'stump')).toHaveLength(6);
-    // as barracas têm lonas de cores diferentes (a segunda nunca repete a primeira)
-    const tents = c.furniture.filter((f) => f.kind === 'tent');
-    expect(tents).toHaveLength(2);
-    expect(tents[0].variant).not.toBe(tents[1].variant);
+    expect(a.furniture.filter((f) => f.kind === 'camp_table' || f.kind === 'camp_table_back')).toHaveLength(6);
+    expect(a.furniture.some((f) => f.kind === 'chest' || f.kind === 'cage')).toBe(true);
+    // itens de parede da masmorra: grade levadiça, corrente, tochas e estandartes do tema
+    const wk = a.wallItems.map((w) => w.kind);
+    for (const k of ['portcullis', 'chain', 'wall_torch', 'banner'] as const) expect(wk, k).toContain(k);
+    expect(a.wallItems.filter((w) => w.kind === 'banner' && w.variant !== undefined)).toHaveLength(2);
   });
 
-  it('não tem parede de castelo: mata densa na face norte e cerca viva no limite sul', () => {
+  it('o miolo do poço fica livre e caminhável (4x3 no meio da arena)', () => {
     for (const slot of [0, 1]) {
-      const c = camp(slot, 77 + slot);
-      const patterns = c.walls.map((w) => w.style.pattern);
-      expect(patterns.every((p) => p === 'treeline' || p === 'hedge'), `slot ${slot}`).toBe(true);
-      expect(c.walls.some((w) => w.kind === 'face' && w.style.pattern === 'treeline')).toBe(true);
-      expect(c.walls.some((w) => w.kind === 'south')).toBe(true);
-      // a face norte continua mostrando a passagem da porta nas salas ao sul
-      if (slot % 2 === 1) expect(c.walls.find((w) => w.kind === 'face')?.doorways?.length).toBe(1);
+      for (const seed of [7, 99, 4242]) {
+        const a = arena(slot, seed);
+        const b = assembleBuilding(columnsFor([slot]), [a]);
+        const cx = a.rect.x + 5;
+        const cy = a.rect.y + 4;
+        for (let y = cy; y < cy + 3; y++) {
+          for (let x = cx; x < cx + 4; x++) {
+            expect(b.grid.walkable(x, y), `poço ${x},${y} (slot ${slot}, semente ${seed})`).toBe(true);
+            expect(b.grid.get(x, y)).toBe(FREE);
+          }
+        }
+      }
     }
   });
 
-  it('toda semente é válida: sem sobreposição, tudo alcançável e nenhum móvel fora do campo', () => {
+  it('toda semente é válida: sem sobreposição, tudo alcançável e nenhum móvel fora da câmara', () => {
     const seeds = Array.from({ length: 60 }, (_, i) => (i * 7919 + 29) >>> 0);
     for (const slot of [0, 1]) {
       for (const seed of seeds) {
-        const c = camp(slot, seed);
-        const b = assembleBuilding(columnsFor([slot]), [c]);
+        const a = arena(slot, seed);
+        const b = assembleBuilding(columnsFor([slot]), [a]);
         const used = new Map<string, string>();
-        for (const f of c.furniture) {
+        for (const f of a.furniture) {
           const def = FURNITURE[f.kind];
           expect(def.mount, f.id).toBe('floor');
           for (let y = f.ty; y < f.ty + def.footprint.h; y++)
             for (let x = f.tx; x < f.tx + def.footprint.w; x++) {
-              expect(x >= c.rect.x + 1 && x < c.rect.x + 15 && y >= c.rect.y + 2 && y < c.rect.y + 11, `${f.id} fora do campo`).toBe(true);
+              expect(x >= a.rect.x + 1 && x < a.rect.x + 15 && y >= a.rect.y + 2 && y < a.rect.y + 11, `${f.id} fora da câmara`).toBe(true);
               if (!def.blocks) continue;
               expect(used.get(`${x},${y}`), `${f.id} sobre ${used.get(`${x},${y}`)}`).toBeUndefined();
               used.set(`${x},${y}`, f.id);
             }
         }
-        const door = c.door!;
+        const door = a.door!;
         const reach = b.grid.reachableFrom(door.x, door.y);
-        for (const sp of c.spots) expect(reach[sp.ty * b.grid.w + sp.tx], `${sp.id} inalcançável (semente ${seed})`).toBe(1);
-        const r = c.rect;
+        for (const sp of a.spots) expect(reach[sp.ty * b.grid.w + sp.tx], `${sp.id} inalcançável (semente ${seed})`).toBe(1);
+        const r = a.rect;
         for (let y = r.y + 2; y < r.y + 11; y++)
           for (let x = r.x + 1; x < r.x + 15; x++) if (b.grid.walkable(x, y)) expect(reach[y * b.grid.w + x], `tile ${x},${y} isolado (semente ${seed})`).toBe(1);
         // spots de uso não caem em cima de móvel que bloqueia
-        for (const sp of c.spots) expect(b.grid.walkable(sp.tx, sp.ty), `${sp.id} sobre móvel`).toBe(true);
-        expect(hiddenWallItems(c)).toEqual([]);
+        for (const sp of a.spots) expect(b.grid.walkable(sp.tx, sp.ty), `${sp.id} sobre móvel`).toBe(true);
+        expect(hiddenWallItems(a)).toEqual([]);
       }
     }
   });
 
-  it('varia por semente: espelhamento e cor da lona vêm do tema', () => {
+  it('varia por semente: espelhamento, estandartes do acento e canto do tesouro', () => {
     const seeds = Array.from({ length: 60 }, (_, i) => (i * 7919 + 13) >>> 0);
-    const vs = seeds.map((s) => campVariant(s, campTheme));
+    const vs = seeds.map((s) => arenaVariant(s, dungeonTheme));
     expect(new Set(vs.map((v) => v.mirror)).size).toBe(2);
-    expect(new Set(vs.map((v) => v.tree)).size).toBe(2);
-    expect(new Set(vs.map((v) => v.bush)).size).toBe(2);
-    // acento esverdeado do tema -> lona verde; acento azul -> lona azul
-    expect(campVariant(1, campTheme).tent).toBe('green');
-    expect(campVariant(1, { ...campTheme, accent: '#5a4fd8' }).tent).toBe('blue');
-    expect(campVariant(1, { ...campTheme, accent: '#d9453f' }).tent).toBe('red');
-    for (const v of vs) expect(v.tent).not.toBe(v.tent2);
+    expect(new Set(vs.map((v) => v.chestEast)).size).toBe(2);
+    expect(new Set(vs.map((v) => v.braziers)).size).toBe(2);
+    // acento avermelhado do tema -> estandarte vermelho; azul -> azul; esverdeado -> verde
+    expect(arenaVariant(1, dungeonTheme).banner).toBe('red');
+    expect(arenaVariant(1, { ...dungeonTheme, accent: '#5a4fd8' }).banner).toBe('blue');
+    expect(arenaVariant(1, { ...dungeonTheme, accent: '#8fbf6a' }).banner).toBe('green');
+    for (const v of vs) expect(v.banner).not.toBe(v.banner2);
+    // o espelhamento move o canto do tesouro e as armações
+    const left = arena(0, 5);
+    const right = arena(0, 5);
+    expect(JSON.stringify(left)).toBe(JSON.stringify(right));
   });
 });
 
 describe('layoutProject: a skin decide o cenário do projeto', () => {
-  it('escritório mantém a sala; fantasia devolve o acampamento no mesmo lote', () => {
+  it('escritório mantém a sala; fantasia devolve a arena da masmorra no mesmo lote', () => {
     const input = { id: '/p/0', slot: 0, seed: 4242 };
     setSkinForTests('office');
     const office = layoutProject(input, theme);
@@ -353,40 +374,60 @@ describe('layoutProject: a skin decide o cenário do projeto', () => {
     const fantasy = layoutProject(input, theme);
     setSkinForTests(undefined);
     expect(office.furniture.some((f) => f.kind === 'desk')).toBe(true);
-    expect(office.furniture.some((f) => f.kind === 'campfire')).toBe(false);
-    expect(fantasy.furniture.some((f) => f.kind === 'campfire')).toBe(true);
+    expect(office.furniture.some((f) => f.kind === 'brazier')).toBe(false);
+    expect(fantasy.furniture.some((f) => f.kind === 'brazier')).toBe(true);
+    expect(fantasy.furniture.some((f) => f.kind === 'weapon_rack')).toBe(true);
     expect(fantasy.furniture.some((f) => f.kind === 'desk')).toBe(false);
+    expect(fantasy.floors.some((f) => f.kind === 'sand')).toBe(true);
     expect(fantasy.door).toEqual(office.door);
     expect(fantasy.rect).toEqual(office.rect);
   });
 });
 
-describe('núcleo e corredor ao ar livre (skin de fantasia)', () => {
-  it('recepção, banheiros, copa e lounge ficam em pátios de grama com mata/cerca viva', () => {
+describe('núcleo e corredor da masmorra (skin de fantasia)', () => {
+  it('recepção, banheiros, copa e lounge viram salões de pedra — sem grama nem cerca viva', () => {
     setSkinForTests('fantasy');
     try {
       const areas = [layoutReception(), layoutRestroom(), layoutCafe(), layoutLounge()];
       for (const a of areas) {
-        expect(a.floors.some((f) => f.kind === 'grass'), a.id).toBe(true);
-        expect(a.floors.some((f) => f.kind === 'sidewalk'), a.id).toBe(true);
-        // a recepção guarda a parede do portal (wood_panel) onde ficam os elevadores; o resto é mata/cerca viva
-        const patterns = a.walls.map((w) => w.style.pattern).filter((p) => !(a.id === RECEPTION_ID && p === 'wood_panel'));
-        expect(patterns.every((p) => p === 'treeline' || p === 'hedge'), a.id).toBe(true);
+        // nada de pátio ao ar livre: nem grama, nem trilha de terra
+        expect(a.floors.some((f) => f.kind === 'grass' || f.kind === 'sidewalk'), a.id).toBe(false);
+        // paredes de masmorra (a taverna tem o enxaimel atrás da bancada)
+        const patterns = a.walls.map((w) => w.style.pattern);
+        expect(patterns.every((p) => p === 'dungeon' || p === 'wood_panel'), a.id).toBe(true);
+        expect(patterns, a.id).toContain('dungeon');
       }
-      // a recepção mantém a parede de pedra do portal (é onde ficam os elevadores)
-      expect(layoutReception().walls[0].style.pattern).toBe('wood_panel');
-      // a copa não pendura janelas na mata
+      // pisos de masmorra: lajes na recepção e na sala de armas, tábuas velhas na taverna, ardósia no banho
+      expect(layoutReception().floors[0].kind).toBe('marble');
+      expect(layoutRestroom().floors[0].kind).toBe('tile_white');
+      expect(layoutCafe().floors[0].kind).toBe('wood');
+      expect(layoutLounge().floors[0].kind).toBe('marble');
+      // portão levadiço na entrada, tochas de parede e estandarte na taverna
+      expect(layoutReception().wallItems.some((w) => w.kind === 'portcullis')).toBe(true);
+      expect(areas.some((a) => a.wallItems.some((w) => w.kind === 'wall_torch'))).toBe(true);
+      expect(layoutCafe().wallItems.some((w) => w.kind === 'banner')).toBe(true);
+      // a sala de armas ganha armação de armas, manequim e boneco de treino
+      const lounge = layoutLounge();
+      for (const k of ['weapon_rack', 'armor_stand', 'training_dummy', 'brazier'] as const) {
+        expect(lounge.furniture.some((f) => f.kind === k), k).toBe(true);
+      }
+      // a copa não pendura janelas na pedra
       expect(layoutCafe().wallItems.some((w) => w.kind === 'window')).toBe(false);
       // as portas do núcleo continuam onde estavam
       expect(layoutRestroom().door).toEqual({ x: 7, y: SOUTH_Y, w: 2, h: 2 });
-      // corredor: estrada de terra com grama nas margens
+      // corredor: calçamento de pedra de ponta a ponta, braseiros nos portões e nenhuma planta
       const corr = layoutCorridor(4);
-      expect(corr.floors.some((f) => f.kind === 'sidewalk')).toBe(true);
-      expect(corr.floors.filter((f) => f.kind === 'grass')).toHaveLength(2);
-      expect(corr.floors.some((f) => f.kind === 'concrete')).toBe(false);
-      // entorno: cerca viva/mata no lugar da fachada de tijolo
+      expect(corr.floors.every((f) => f.kind === 'concrete')).toBe(true);
+      expect(corr.furniture.some((f) => f.kind === 'brazier')).toBe(true);
+      expect(corr.furniture.some((f) => f.kind === 'plant_tall' || f.kind === 'plant_small')).toBe(false);
+      expect(corr.furniture.some((f) => f.kind === 'bench_stone')).toBe(true);
+      // entorno: chão de rocha e paredes de masmorra no lugar do gramado e da fachada de tijolo
+      const ext = layoutExterior(4);
+      expect(ext.floors.some((f) => f.kind === 'rock')).toBe(true);
+      expect(ext.floors.some((f) => f.kind === 'grass')).toBe(false);
       const shell = slotShell(5, true);
-      expect(shell.walls.every((w) => w.style.pattern === 'treeline' || w.style.pattern === 'hedge')).toBe(true);
+      expect(shell.walls.every((w) => w.style.pattern === 'dungeon')).toBe(true);
+      expect(shell.props.some((p) => p.kind === 'parasol' || p.kind === 'flowers')).toBe(false);
     } finally {
       setSkinForTests(undefined);
     }

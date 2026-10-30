@@ -209,7 +209,20 @@ export type FurnitureKind =
   | 'barrel' // 1x1 barril de madeira com aros de ferro.
   | 'camp_tree' // 1x1 árvore do acampamento (pinheiro ou carvalho). variants: 'pine' | 'oak'
   | 'camp_bush' // 1x1 arbusto com frutinhas. variants: 'fern' | 'flower'
-  | 'lantern_post'; // 1x1 poste com lanterna acesa (o "interruptor" do acampamento). rects.glow = lanterna.
+  | 'lantern_post' // 1x1 poste com lanterna acesa (o "interruptor" do acampamento). rects.glow = lanterna.
+  // --- arena da masmorra (skin de fantasia: cada sala de projeto vira uma câmara de duelo)
+  | 'brazier' // 1x1 braseiro de ferro com brasas (bloqueia; ilumina a arena). rects.glow = centro do fogo.
+  | 'weapon_rack' // 2x1 armação de armas (espadas, lanças, escudos) encostada na parede.
+  | 'armor_stand' // 1x1 manequim de armadura completa sobre base de madeira.
+  | 'training_dummy' // 1x1 boneco de treino de palha com saco de pancada e espada fincada.
+  | 'cage' // 1x1 jaula de ferro com grades (canto da câmara).
+  | 'chest' // 1x1 baú de tesouro fechado, com ferragens e fechadura.
+  | 'bench_stone' // 2x1 banco de pedra (assento dos espectadores da arena).
+  // --- montados na parede norte da masmorra
+  | 'portcullis' // 2 tiles. Grade levadiça de ferro da masmorra (portão da câmara).
+  | 'chain' // 1 tile. Corrente pendurada com argola e gancho.
+  | 'wall_torch' // 1 tile. Archote de parede aceso. rects.glow = chama.
+  | 'banner'; // 1 tile. Estandarte da casa (variant = cor do acento do tema).
 
 export interface FurnitureDef {
   mount: 'floor' | 'wall';
@@ -298,6 +311,19 @@ export const FURNITURE: Readonly<Record<FurnitureKind, FurnitureDef>> = {
   camp_tree: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true, variants: ['pine', 'oak'] },
   camp_bush: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true, variants: ['fern', 'flower'] },
   lantern_post: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
+  // --- arena da masmorra (fantasia). Footprints espelham os móveis equivalentes do escritório,
+  //     então o layout e a simulação não precisam saber da skin.
+  brazier: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
+  weapon_rack: { mount: 'floor', footprint: { w: 2, h: 1 }, blocks: true },
+  armor_stand: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
+  training_dummy: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
+  cage: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
+  chest: { mount: 'floor', footprint: { w: 1, h: 1 }, blocks: true },
+  bench_stone: { mount: 'floor', footprint: { w: 2, h: 1 }, blocks: false, seat: true },
+  portcullis: { mount: 'wall', footprint: { w: 2, h: 0 }, blocks: false },
+  chain: { mount: 'wall', footprint: { w: 1, h: 0 }, blocks: false },
+  wall_torch: { mount: 'wall', footprint: { w: 1, h: 0 }, blocks: false },
+  banner: { mount: 'wall', footprint: { w: 1, h: 0 }, blocks: false, variants: ['red', 'blue', 'green', 'gold', 'violet', 'teal'] },
 };
 
 export type FloorKind =
@@ -309,7 +335,9 @@ export type FloorKind =
   | 'marble' // recepção
   | 'grass' // área externa
   | 'sidewalk' // calçada externa
-  | 'street'; // rua externa (faixas desenhadas pelo render se quiser)
+  | 'street' // rua externa (faixas desenhadas pelo render se quiser)
+  | 'sand' // (aditivo) areia batida da arena da masmorra (fantasia); no escritório cai num tom neutro
+  | 'rock'; // (aditivo) chão de rocha escura do entorno da masmorra
 
 export type WallPattern =
   | 'plain'
@@ -322,7 +350,9 @@ export type WallPattern =
   // Skin de fantasia: o acampamento não tem paredes — a "parede" norte é a borda da mata
   // (copa densa sobre floresta escura) e a sul é uma cerca viva baixa.
   | 'treeline'
-  | 'hedge';
+  | 'hedge'
+  // Skin de fantasia (masmorra): blocos irregulares de pedra escura, com musgo nas juntas e rachaduras.
+  | 'dungeon';
 
 export interface WallStyle {
   /** Cor base da face da parede. */

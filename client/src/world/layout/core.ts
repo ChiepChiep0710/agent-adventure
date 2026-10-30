@@ -21,26 +21,25 @@ export const CORE_WALLS = {
 };
 
 /**
- * Núcleo na skin de fantasia: o prédio é um pátio ao ar livre — a mata fecha o fundo e as
- * divisórias viram cerca viva. Nada de pedra de castelo dentro do acampamento.
+ * Núcleo na skin de fantasia: o prédio é um complexo de masmorra — salões de pedra escura,
+ * tochas, estandartes e portões de ferro no lugar das paredes claras e das divisórias de vidro.
  */
-const FAN_MATA: WallStyle = { base: '#46603a', trim: '#2e4a2b', pattern: 'treeline' };
-const FAN_CERCA: WallStyle = { base: '#4f7a42', trim: '#35552f', pattern: 'hedge' };
+const FAN_PEDRA: WallStyle = { base: '#4c4842', trim: '#262420', pattern: 'dungeon' };
+const FAN_PEDRA_ESCURA: WallStyle = { base: '#3f3c37', trim: '#211f1c', pattern: 'dungeon' };
+/** Taverna subterrânea: enxaimel (reboco e vigas) atrás da bancada, para aquecer a câmara. */
+const FAN_TAVERNA: WallStyle = { base: '#6b4a32', trim: '#3a2a1e', pattern: 'wood_panel' };
 
 /** Centros (em tiles locais) dos dois elevadores na face norte da recepção. */
 export const ELEVATOR_CX = [3, 6.5] as const;
 
 export function layoutReception(): AreaLayout {
   const b = new AreaBuilder(RECEPTION_ID, 'reception', { x: 0, y: NORTH_Y, w: COL_W, h: ROOM_H });
-  const wall = CORE_WALLS.reception;
   const fan = isFantasy();
-  // fantasia: pátio do portal — grama e trilha de terra no lugar do mármore (os elevadores ficam
-  // na parede de pedra do portal, que continua sendo a "fachada" do prédio)
-  b.floor(fan ? 'grass' : 'marble', 0, 0, 16, 12, 101);
-  if (fan) {
-    b.floor('sidewalk', 2, 2, 6, 9, 104);
-    b.floor('sidewalk', 9, 6, 6, 4, 105);
-  }
+  const wall = fan ? FAN_PEDRA : CORE_WALLS.reception;
+  // fantasia: salão de entrada da masmorra — lajes de pedra e calçamento na passagem da porta
+  // (os elevadores continuam sendo a "fachada" por onde todos chegam e vão embora)
+  b.floor('marble', 0, 0, 16, 12, 101);
+  if (fan) b.floor('concrete', 7, 5, 2, 6, 104);
   b.rug(1.5, 2.2, 6.5, 2.6, '#3d5a80', 102);
   b.rug(8.6, 6.4, 5.2, 3.2, '#b65f3a', 103);
   b.face(0.5, 15, wall);
@@ -54,7 +53,14 @@ export function layoutReception(): AreaLayout {
     b.spot('elevator', lx, 2, 'up', { x: b.px(cx), y: b.py(2) + 2, group: `elevator:${i}` });
   });
   b.wall('sign', 11, undefined, { order: 0.9 });
-  b.wall('clock', 8.15, undefined, { order: 0.7 });
+  if (fan) {
+    // masmorra: grade levadiça atrás dos elevadores e tochas nos cantos do salão
+    b.wall('portcullis', 8.15, undefined, { order: 0.35 });
+    b.wall('wall_torch', 0.5, undefined, { order: 0.3 });
+    b.wall('wall_torch', 4.6, undefined, { order: 0.31 });
+  } else {
+    b.wall('clock', 8.15, undefined, { order: 0.7 });
+  }
   b.wall('painting', 14.25, undefined, { order: 0.6 });
 
   b.furn('plant_tall', 1, 2, 'monstera', { order: 0.2 });
@@ -75,8 +81,8 @@ export function layoutReception(): AreaLayout {
   b.furn('water_cooler', 1, 7, undefined, { order: 0.53 });
   b.spot('water', 1, 8, 'up', { dy: -3 });
 
-  // aberta para o corredor: divisórias de vidro nas pontas
-  for (const lx of [1, 2, 3, 12, 13, 14]) b.furn('glass_partition', lx, 11, 'h', { order: 0.15 });
+  // aberta para o corredor: divisórias de vidro nas pontas (na masmorra, braseiros)
+  for (const lx of fan ? [1, 2, 13, 14] : [1, 2, 3, 12, 13, 14]) b.furn(fan ? 'brazier' : 'glass_partition', lx, 11, fan ? undefined : 'h', { order: 0.15 });
   b.walk(1, 2, 14, 10);
   b.spot('talk', 6, 9, 'right', { group: 'talk:recepcao', dx: -1 });
   b.spot('talk', 7, 9, 'left', { group: 'talk:recepcao', dx: 1 });
@@ -89,17 +95,18 @@ export function layoutReception(): AreaLayout {
 export function layoutRestroom(): AreaLayout {
   const b = new AreaBuilder(RESTROOM_ID, 'restroom', { x: 0, y: SOUTH_Y, w: COL_W, h: ROOM_H });
   const fan = isFantasy();
-  const wall = fan ? FAN_MATA : CORE_WALLS.restroom;
-  b.floor(fan ? 'grass' : 'tile_white', 0, 0, 16, 12, 201);
-  // fantasia: trilha de terra da porta (norte, x 7-8) até as tinas
-  if (fan) b.floor('sidewalk', 7, 0, 2, 5, 203);
+  const wall = fan ? FAN_PEDRA : CORE_WALLS.restroom;
+  // fantasia: câmara do poço de banho — ardósia no chão e pedra nas paredes
+  b.floor('tile_white', 0, 0, 16, 12, 201);
+  // passagem de calçamento da porta (norte, x 7-8) até as tinas
+  if (fan) b.floor('concrete', 7, 2, 2, 4, 203);
   // tapetinho só na frente das pias (nada de tapete grande no banheiro)
   b.rug(2, 3.15, 3, 0.85, '#6fa3b8', 202);
   b.face(0.5, 15, wall, [{ lx: 7, w: 2 }]);
   b.wall('door_frame', 8, undefined, { order: 0.05 });
-  b.south(0.5, 15, 11, { ...(fan ? FAN_CERCA : wall), exterior: true });
-  b.cap(0, 0, 0.5, 12, fan ? FAN_CERCA : wall);
-  b.cap(15.5, 0, 0.5, 12, fan ? FAN_CERCA : wall);
+  b.south(0.5, 15, 11, { ...(fan ? FAN_PEDRA_ESCURA : wall), exterior: true });
+  b.cap(0, 0, 0.5, 12, fan ? FAN_PEDRA_ESCURA : wall);
+  b.cap(15.5, 0, 0.5, 12, fan ? FAN_PEDRA_ESCURA : wall);
   b.walk(1, 2, 14, 9);
   b.walk(7, 0, 2, 2);
   b.area.door = { x: 7, y: SOUTH_Y, w: 2, h: 2 };
@@ -121,6 +128,11 @@ export function layoutRestroom(): AreaLayout {
     b.spot('stall', lx, 4, 'up', { furnitureId: stall, x: b.px(lx + 1), y: b.py(4) - 3, sortY: b.py(4) - 0.5 });
   }
   b.wall('poster', 1.5, 'cat', { order: 0.5 });
+  if (fan) {
+    // masmorra: tochas na pedra, uma de cada lado da fileira de cabines
+    b.wall('wall_torch', 0.8, undefined, { order: 0.3 });
+    b.wall('wall_torch', 8.15, undefined, { order: 0.31 });
+  }
   b.furn('plant_small', 14, 6, 'succulent', { order: 0.2 });
   b.furn('plant_tall', 1, 10, 'ficus', { order: 0.21 });
   b.furn('plant_tall', 14, 10, 'monstera', { order: 0.22 });
@@ -136,12 +148,12 @@ export function layoutRestroom(): AreaLayout {
 export function layoutCafe(): AreaLayout {
   const b = new AreaBuilder(CAFE_ID, 'cafe', { x: COL_W, y: NORTH_Y, w: COL_W, h: ROOM_H });
   const fan = isFantasy();
-  const wall = fan ? FAN_MATA : CORE_WALLS.cafe;
-  // fantasia: pátio da taverna — grama e terra batida na frente da bancada
-  b.floor(fan ? 'grass' : 'tile_check', 0, 0, 16, 12, 301);
-  if (fan) b.floor('sidewalk', 1, 3, 14, 2, 303);
+  const wall = fan ? FAN_PEDRA : CORE_WALLS.cafe;
+  // fantasia: taverna subterrânea — tábuas velhas no chão e enxaimel atrás da bancada
+  b.floor(fan ? 'wood' : 'tile_check', 0, 0, 16, 12, 301);
+  if (fan) b.floor('concrete', 7, 9, 3, 2, 303);
   // frontão de mármore atrás da bancada + parede clara com janelas
-  b.face(0.5, 9, fan ? FAN_CERCA : CORE_WALLS.cafeSplash);
+  b.face(0.5, 9, fan ? FAN_TAVERNA : CORE_WALLS.cafeSplash);
   b.face(9.5, 6, wall);
   b.cap(0, 0, 0.5, 12, wall);
   b.cap(15.5, 0, 0.5, 12, wall);
@@ -163,6 +175,12 @@ export function layoutCafe(): AreaLayout {
   // cardápio do café acima das cafeteiras
   b.wall('poster', 5.5, 'coffee', { order: 0.45 });
   b.wall('clock', 7.5, undefined, { order: 0.6 });
+  if (fan) {
+    // taverna: tochas acesas na pedra e um estandarte na parede do fundo
+    b.wall('wall_torch', 0.35, undefined, { order: 0.3 });
+    b.wall('wall_torch', 8.3, undefined, { order: 0.31 });
+    b.wall('banner', 12.5, 'gold', { order: 0.25 });
+  }
 
   const vend = b.furn('vending_machine', 9, 2, undefined, { order: 0.34 });
   b.spot('snack', 9, 3, 'up', { dy: -3, furnitureId: vend });
@@ -200,8 +218,8 @@ export function layoutCafe(): AreaLayout {
   b.furn('plant_tall', 14, 10, 'ficus', { order: 0.21 });
   b.furn('trash_bin', 1, 6, undefined, { order: 0.6 });
 
-  // aberta para o corredor com vidro
-  for (const lx of [1, 2, 3, 4, 5, 10, 11, 12, 13, 14]) b.furn('glass_partition', lx, 11, 'h', { order: 0.15 });
+  // aberta para o corredor com vidro (na masmorra, braseiros flanqueando a passagem)
+  for (const lx of fan ? [1, 4, 11, 14] : [1, 2, 3, 4, 5, 10, 11, 12, 13, 14]) b.furn(fan ? 'brazier' : 'glass_partition', lx, 11, fan ? undefined : 'h', { order: 0.15 });
   b.walk(1, 2, 14, 10);
   b.spot('talk', 7, 9, 'right', { group: 'talk:copa', dx: -1 });
   b.spot('talk', 8, 9, 'left', { group: 'talk:copa', dx: 1 });
@@ -212,25 +230,32 @@ export function layoutCafe(): AreaLayout {
 export function layoutLounge(): AreaLayout {
   const b = new AreaBuilder(LOUNGE_ID, 'lounge', { x: COL_W, y: SOUTH_Y, w: COL_W, h: ROOM_H });
   const fan = isFantasy();
-  const wall = fan ? FAN_MATA : CORE_WALLS.lounge;
-  // fantasia: o lounge é um terraço da taverna (grama sob o tapete, madeira velha do deck)
-  b.floor(fan ? 'grass' : 'wood', 0, 0, 16, 12, 401);
-  // trilha de terra da passagem larga (norte, x 7-9) para dentro do terraço
-  if (fan) b.floor('sidewalk', 7, 0, 3, 4, 404);
+  const wall = fan ? FAN_PEDRA : CORE_WALLS.lounge;
+  // fantasia: sala de armas e treino da masmorra — lajes de pedra, manequins e armações
+  b.floor(fan ? 'marble' : 'wood', 0, 0, 16, 12, 401);
+  // passagem de calçamento da entrada larga (norte, x 7-9) para dentro da sala
+  if (fan) b.floor('concrete', 7, 2, 3, 3, 404);
   b.rug(1.5, 3.2, 7, 5.2, '#4f8a5b', 402);
   b.rug(9.2, 4.6, 5.6, 4.4, '#d7c8a8', 403);
   // parede com TV a oeste; vidro a leste; passagem larga no meio
   b.face(0.5, 6.5, wall);
-  b.face(10, 5.5, fan ? FAN_CERCA : CORE_WALLS.glass);
-  b.south(0.5, 15, 11, { ...(fan ? FAN_CERCA : wall), exterior: true });
-  b.cap(0, 0, 0.5, 12, fan ? FAN_CERCA : wall);
-  b.cap(15.5, 0, 0.5, 12, fan ? FAN_CERCA : wall);
+  b.face(10, 5.5, fan ? FAN_PEDRA_ESCURA : CORE_WALLS.glass);
+  b.south(0.5, 15, 11, { ...(fan ? FAN_PEDRA_ESCURA : wall), exterior: true });
+  b.cap(0, 0, 0.5, 12, fan ? FAN_PEDRA_ESCURA : wall);
+  b.cap(15.5, 0, 0.5, 12, fan ? FAN_PEDRA_ESCURA : wall);
   b.walk(1, 2, 14, 9);
   b.walk(7, 0, 3, 2);
   b.area.door = { x: COL_W + 7, y: SOUTH_Y, w: 3, h: 2 };
 
   b.wall('tv', 4.5, undefined, { order: 0.4 });
   b.wall('painting', 1.75, undefined, { order: 0.5 });
+  if (fan) {
+    // masmorra: a sala de armas tem armação de armas, manequim e boneco de treino
+    b.furn('weapon_rack', 8, 3, undefined, { order: 0.26 });
+    b.furn('armor_stand', 2, 3, undefined, { order: 0.27 });
+    b.furn('training_dummy', 4, 3, undefined, { order: 0.28 });
+    b.furn('brazier', 13, 4, undefined, { order: 0.24 });
+  }
 
   // sofá de costas para a câmera, de frente para a TV
   const sofa = b.furn('sofa', 3, 6, 'up', { order: 0.5 });
