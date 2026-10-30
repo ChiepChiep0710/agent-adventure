@@ -4,7 +4,7 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { parseAppearanceParts, parseCharacterName, parseSeed, type AppearanceParts } from '../../shared/appearance';
-import { pickName, type PersonName } from '../../shared/names';
+import { isPoolName, pickName, type PersonName } from '../../shared/names';
 import { errMsg, log } from '../log';
 import { tr } from '../../shared/i18n';
 
@@ -66,10 +66,14 @@ export class NameStore {
   /** `file` null = só em memória (testes ou diretório de dados indisponível). */
   constructor(
     private readonly file: string | null,
-    opts: { now?: () => number } = {},
+    opts: { now?: () => number; poolOnly?: boolean } = {},
   ) {
     this.now = opts.now ?? Date.now;
+    this.poolOnly = opts.poolOnly === true;
   }
+
+  /** Só aceita nomes do pool (`shared/names.ts`), descartando os guardados de fora dele. */
+  private readonly poolOnly: boolean;
 
   load(): void {
     if (!this.file) return;
@@ -93,7 +97,7 @@ export class NameStore {
   /** Nome de `key`: o persistido, se não colidir com `used`; senão um novo do pool. */
   assign(key: string, used: ReadonlySet<string>): PersonName {
     const stored = this.names.get(key);
-    if (stored && !used.has(stored.name)) {
+    if (stored && !used.has(stored.name) && (!this.poolOnly || isPoolName(stored.name))) {
       stored.at = this.now();
       this.scheduleFlush();
       return { name: stored.name, look: stored.look };

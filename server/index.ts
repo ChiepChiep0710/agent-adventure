@@ -73,7 +73,7 @@ if (!config.inDocker) {
 const legacyEnv = legacyEnvWarning(Object.keys(process.env));
 if (legacyEnv) log.warn(legacyEnv);
 
-const names = new NameStore(join(config.dataDir, 'names.json'));
+const names = new NameStore(join(config.dataDir, 'names.json'), { poolOnly: config.namesMode === 'pool' });
 names.load();
 // Nomes de sala escolhidos pelo usuário (botão direito > Renomear).
 const roomAliases = new RoomAliases(join(config.dataDir, 'rooms.json'));
@@ -116,6 +116,7 @@ const accounts = new AccountsService({
 });
 const office = new Office({
   names,
+  poolNamesOnly: config.namesMode === 'pool',
   roomAlias: (path) => roomAliases.get(path),
   version: config.version,
   // No modo dev o Vite serve o cliente direto do código-fonte: não há build para comparar.

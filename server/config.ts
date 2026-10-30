@@ -17,6 +17,12 @@ export interface ServerConfig {
   dev: boolean;
   /** Liga o simulador de demonstração ao iniciar. */
   demo: boolean;
+  /**
+   * De onde vêm os nomes dos personagens: 'source' (padrão, nomes da fonte — arquivo/config do Claude Code e do Hermes)
+   * ou 'pool' (só os nomes de `shared/names.ts`; quem não couber no pool ganha sufixo "Ana 2").
+   * HABBLAUD_NAMES=pool.
+   */
+  namesMode: 'source' | 'pool';
   /** Rodando dentro de um container (PIDs do registro são do host: não dá para checá-los). */
   inDocker: boolean;
   home: string;
@@ -242,6 +248,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env, argv: string[] 
     host,
     dev: argv.includes('--dev'),
     demo: isTruthy(env.HABBLAUD_DEMO),
+    namesMode: env.HABBLAUD_NAMES?.trim().toLowerCase() === 'pool' ? 'pool' : 'source',
     inDocker,
     home,
     claudeDirs: discoverClaudeDirs(env, home),

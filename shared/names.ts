@@ -46,3 +46,16 @@ export function pickName(id: string, used: ReadonlySet<string>): PersonName {
     if (!used.has(name)) return { name, look: base.look };
   }
 }
+
+const POOL_NAMES: ReadonlySet<string> = new Set(NAME_POOL.map((p) => p.name));
+
+/**
+ * `name` veio do pool? Vale também o sufixo numérico que o pool usa quando esgota ("Ana 2").
+ * Nomes de fora do pool (título de sessão, apelido da fonte) são recusados pelo escritório: os
+ * personagens usam os nomes do pool e só ganham sufixo quando o pool inteiro já está em uso.
+ */
+export function isPoolName(name: string): boolean {
+  if (POOL_NAMES.has(name)) return true;
+  const m = /^(.+) (\d+)$/.exec(name);
+  return !!m && POOL_NAMES.has(m[1]) && Number(m[2]) >= 2;
+}
