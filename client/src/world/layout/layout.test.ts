@@ -26,7 +26,7 @@ function roomsFor(slots: number[]): AreaLayout[] {
   return slots.map((slot) => layoutProjectRoom({ id: `/proj/${slot}`, slot, seed: 1000 + slot * 77 }, theme));
 }
 
-const STATIONS = ['rune_mat', 'anvil_block', 'alchemy_pot', 'grindstone'] as const;
+const STATIONS: readonly FurnitureKind[] = ['rune_mat', 'anvil_block', 'alchemy_pot', 'grindstone'];
 
 describe('mapeamento de slots', () => {
   it('coluna = núcleo + floor(slot/2); par = norte, ímpar = sul', () => {

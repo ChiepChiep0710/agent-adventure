@@ -404,6 +404,11 @@ export interface EncounterActor {
   moving?: boolean;
   /** Sentado à mesa: o monstro vai para a frente da mesa, senão fica escondido atrás dela. */
   seated?: boolean;
+  /**
+   * Chefe da câmara (skin de fantasia): quando a sala tem chefe, o herói luta CONTRA ele — nada de
+   * monstro próprio, o golpe vai na direção do chefe e o impacto estoura nele.
+   */
+  boss?: { x: number; y: number };
 }
 
 /** Distância lateral (px) entre o herói e a cena. */
@@ -488,6 +493,17 @@ function coin(ctx: CanvasRenderingContext2D, x: number, y: number, face: boolean
  * Desenha a cena do agente. Chamado pelo renderizador por personagem visível (já dentro da ordenação
  * por profundidade), com o limite de cenas por quadro aplicado lá.
  */
+/** Alvo do combate: o chefe da sala (quando existe) ou o monstrinho ao lado, com o lado do desenho. */
+export function fightTarget(
+  actor: EncounterActor,
+  e: Encounter,
+): { x: number; y: number; side: -1 | 1; boss: boolean } {
+  const boss = e.kind === 'battle' ? actor.boss : undefined;
+  if (boss) return { x: boss.x, y: boss.y, side: boss.x >= actor.x ? 1 : -1, boss: true };
+  const side = e.side;
+  return { x: actor.x + side * e.gap, y: monsterBaseY(actor), side, boss: false };
+}
+
 export function drawEncounter(ctx: CanvasRenderingContext2D, actor: EncounterActor, now: number): void {
   const e = encounterFor(actor);
   if (!e.kind) return;
@@ -495,13 +511,16 @@ export function drawEncounter(ctx: CanvasRenderingContext2D, actor: EncounterAct
   if (e.kind === 'rest' && actor.moving) return;
   const still = stillMotion();
   const t = still ? 0 : now;
-  const side = e.side;
-  const baseY = monsterBaseY(actor);
-  const mx = actor.x + side * e.gap;
+  // Contra o chefe da sala: o alvo é o chefe (e o lado vem da posição dele, não da semente).
+  const aim = fightTarget(actor, e);
+  const boss = aim.boss;
+  const side = aim.side;
+  const baseY = aim.y;
+  const mx = aim.x;
   const alpha = actor.alpha;
 
   // Sombra de "arena": anel de pedra sob o combate (deixa claro que ali é o ringue).
-  if (e.kind === 'battle' || e.kind === 'guard' || e.kind === 'loot') {
+  if (!boss && (e.kind === 'battle' || e.kind === 'guard' || e.kind === 'loot')) {
     ctx.globalAlpha = alpha * 0.22;
     ctx.fillStyle = '#0d1020';
     ctx.beginPath();
@@ -524,8 +543,11 @@ export function drawEncounter(ctx: CanvasRenderingContext2D, actor: EncounterAct
         ctx.ellipse(Math.round(mx), Math.round(baseY - 10), 13, 12, 0, 0, Math.PI * 2);
         ctx.fill();
       }
-      // 1) monstro (ou a nuvem quando cai; some/renasce no fim do ciclo)
-      if (beat.defeated) {
+      // 1) monstro (ou a nuvem quando cai; some/renasce no fim do ciclo) — com chefe na sala não
+      // existe monstro próprio: quem leva o golpe é o chefe, desenhado pelo renderizador.
+      if (boss) {
+        // nada: só o ataque do herói e o impacto no chefe (abaixo)
+      } else if (beat.defeated) {
         blit(ctx, 'poof', beat.poofFrame, mx, baseY, alpha, side);
       } else if (beat.respawn < 1) {
         blit(ctx, e.monster ?? 'slime', 0, mx, baseY, alpha * beat.respawn, side);
@@ -552,13 +574,14 @@ export function drawEncounter(ctx: CanvasRenderingContext2D, actor: EncounterAct
         // faíscas pequenas no choque (desenhadas direto: sem estado, determinísticas)
         ctx.globalAlpha = alpha * 0.9;
         ctx.fillStyle = '#ffe9a8';
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < (boss ? 7 : 4); i++) {
           const d = mix(actor.seed + beat.cycle * 7, i + 3);
           ctx.fillRect(Math.round(at + side * (2 + (d % 6))), Math.round(baseY - 6 - (d % 9)), 1, 1);
         }
       }
       // 3) vida + números de dano
-      if (!beat.defeated && beat.respawn >= 1) {
+      // barra do monstro: com chefe na sala, a barra é a do chefe (desenhada junto dele)
+      if (!boss && !beat.defeated && beat.respawn >= 1) {
         const barY = baseY - 32;
         drawHpBar(ctx, mx, barY, beat.hp, alpha * 0.95);
       }

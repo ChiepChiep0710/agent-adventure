@@ -67,7 +67,8 @@ export function bossPose(biome: DungeonBiomeId, seed: number, activeHeroes: numb
   const hp = bossHp(activeHeroes);
   // ciclo de golpe: começa num instante diferente por sala (a semente) para as salas não sincronizarem
   const phase = ((now + (seed % 900)) % 1800) / 1800;
-  const frame: 0 | 1 | 2 = !engaged ? 0 : phase < 0.22 ? 1 : 0;
+  // ciclo de briga: o chefe ergue o golpe, é atingido pelos heróis e volta a se firmar
+  const frame: 0 | 1 | 2 = !engaged ? 0 : phase < 0.22 ? 1 : phase > 0.55 && phase < 0.7 ? 2 : 0;
   return { kind: bossKindFor(biome), frame, hp, engaged };
 }
 

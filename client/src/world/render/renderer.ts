@@ -115,6 +115,8 @@ export class Renderer {
   cars: Car[] = [];
   private nextCarAt = 0;
   private ents: Ent[] = [];
+  /** Chefe de cada sala no quadro atual (sala -> chefe): alvo dos golpes dos heróis. */
+  private readonly bosses = new Map<string, BossEnt>();
   private pool: Ent[] = [];
   private date = new Date();
   private icons: { x: number; y: number; name: IconName; bounce: number; alpha: number; badge: number }[] = [];
@@ -442,6 +444,7 @@ export class Renderer {
       const p = vis.px;
       if (!visible(p.x - TILE, p.y - 3 * TILE, p.w + 2 * TILE, p.h + 4 * TILE)) continue;
       const anim = vis.room ? buildAnim(vis.room.phase, vis.room.progress(now)) : NO_ANIM;
+      this.bosses.clear();
       for (const f of vis.furniture) {
         const s = anim.mode === 'none' ? 1 : furnitureScale(anim, f.order);
         if (s <= 0.01) continue;
@@ -453,7 +456,10 @@ export class Renderer {
       // chefe da câmara: parado no poço, como parte do cenário (skin de fantasia)
       if (isFantasy() && vis.room && vis.layout.kind === 'room') {
         const boss = this.bossOf(vis, now);
-        if (boss) push(K.Boss, boss.y, boss, vis, boss.alpha);
+        if (boss) {
+          this.bosses.set(vis.id, boss);
+          push(K.Boss, boss.y, boss, vis, boss.alpha);
+        }
       }
     }
     // os agentes e, na visita, o visitante
@@ -895,7 +901,15 @@ export class Renderer {
       statusSince: ch.info.statusSince,
       moving: ch.step !== null,
       seated: ch.seated,
+      boss: this.bossTargetFor(ch.roomId),
     };
+  }
+
+  /** Onde fica o chefe da sala do agente (alvo dos golpes), se a sala tiver chefe. */
+  private bossTargetFor(roomId: string): { x: number; y: number } | undefined {
+    const b = this.bosses.get(roomId);
+    // mira no peito do chefe (um pouco acima dos pés), não no chão
+    return b ? { x: b.x, y: b.y - 10 } : undefined;
   }
 
   /**

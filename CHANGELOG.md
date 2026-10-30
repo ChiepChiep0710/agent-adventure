@@ -9,6 +9,9 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/), e
 do meio (0.**3**.0).
 
 ## [Não lançado]
+- Skin de fantasia: com chefe na câmara, o personagem luta CONTRA ele — some o monstro próprio, o
+  golpe (bola de fogo, adaga, luz, martelo) sai na direção do chefe com o impacto nele, e o chefe
+  alterna golpe/ferido no ciclo de briga.
 - Skin de fantasia: cada câmara ganhou um CHEFE residente no centro do poço (Múmia de Arenito, Rei
   dos Ossos, Golem de Magma, Guardião de Gelo, Horror de Musgo, Rainha de Cristal, Rei Afogado), com
   nome, barra de vida e pose de golpe quando alguém da sala está trabalhando. Ele não segue ninguém:
